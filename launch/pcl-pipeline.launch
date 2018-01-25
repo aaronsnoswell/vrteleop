@@ -1,0 +1,11 @@
+<launch>
+  
+  <arg name="input" default="/pcl_stream" />
+
+  <!-- Dropping -->
+  <arg name="drop_x" default="6" />
+  <arg name="drop_y" default="7" />
+  <node name="pipeline_throttle" pkg="pcl_pipeline_utils" type="dropper.py"
+    args="$(arg input) $(arg drop_x) $(arg drop_y) /pipeline/throttled" />
+
+</launch>
