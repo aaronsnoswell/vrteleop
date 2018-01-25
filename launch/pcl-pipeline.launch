@@ -2,10 +2,44 @@
   
   <arg name="input" default="/pcl_stream" />
 
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+
   <!-- Dropping -->
+  <!-- Kinect runs around 7hz - dropping 6 out of 7 gets us to ~1hz -->
   <arg name="drop_x" default="6" />
   <arg name="drop_y" default="7" />
   <node name="pipeline_throttle" pkg="pcl_pipeline_utils" type="dropper.py"
     args="$(arg input) $(arg drop_x) $(arg drop_y) /pipeline/throttled" />
+
+  <!-- Decimation -->
+  <arg name="decimation_leafsize_m" default="0.01" />
+  <node pkg="nodelet" type="nodelet" name="pipeline_decimation" args="load pcl/VoxelGrid pcl_manager" output="screen">
+    <remap from="~input" to="/pipeline/throttled" />
+
+    <param name="filter_field_name" type="string" value="z" />
+    <param name="filter_limit_min" type="double" value="0.1" />
+    <param name="filter_limit_max" type="double" value="5" />
+    <param name="filter_limit_negative" type="bool" value="false" />
+    <param name="leaf_size" type="double" value="$(arg decimation_leafsize_m)" />
+
+    <remap from="~output" to="/pipeline/decimated" />
+  </node>
+
+  <!-- Outlier Removal -->
+  <arg name="outlier_mean_k" default="10" />
+  <arg name="outlier_stddev" default="1.0" />
+  <node pkg="nodelet" type="nodelet" name="pipeline_outlier_removal" args="load pcl/StatisticalOutlierRemoval pcl_manager" output="screen">
+    <remap from="~input" to="/pipeline/decimated" />
+
+    <param name="mean_k" type="int" value="$(arg outlier_mean_k)" />
+    <param name="stddev" type="double" value="$(arg outlier_stddev)" />
+    <param name="negative" type="bool" value="false" />
+
+    <remap from="~output" to="/pipeline/outliers_removed" />
+  </node>
+  
+  <!-- MLS Smoothing -->
+
+  <!-- Compression -->
 
 </launch>
