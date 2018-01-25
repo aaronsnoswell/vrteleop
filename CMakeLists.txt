@@ -157,8 +157,12 @@ include_directories(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 ## Grab MLS
-add_executable(pcl_mls src/moving_least_squares.cpp)
-target_link_libraries(pcl_mls ${catkin_LIBRARIES})
+add_executable(pcl_moving_least_squares src/pcl_moving_least_squares.cpp)
+target_link_libraries(pcl_moving_least_squares ${catkin_LIBRARIES})
+
+## Grab Compression
+add_executable(pcl_compression src/pcl_compression.cpp)
+target_link_libraries(pcl_compression ${catkin_LIBRARIES})
 
 
 #############
