@@ -12,7 +12,10 @@
 
 
 /**
- * Simple class to allow appling a Moving Least Squares smoothing filter
+ * Simple class to compress a point cloud
+ * Based on http://pointclouds.org/documentation/tutorials/compression.php#octree-compression
+ *
+ * TODO Implement this!
  */
 class MovingLeastSquares {
 private:
