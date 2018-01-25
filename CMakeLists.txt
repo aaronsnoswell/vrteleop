@@ -9,6 +9,11 @@ project(pcl_pipeline_utils)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  roscpp
+  std_msgs
+  sensor_msgs
+  pcl_conversions
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -147,6 +152,14 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
+## Grab any includes
+include_directories(include ${catkin_INCLUDE_DIRS})
+
+## Grab MLS
+add_executable(pcl_mls src/moving_least_squares.cpp)
+target_link_libraries(pcl_mls ${catkin_LIBRARIES})
+
 
 #############
 ## Install ##
