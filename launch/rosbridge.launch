@@ -1,0 +1,30 @@
+<launch>
+
+  <arg name="port" default="9090" />
+  <arg name="host" default="" />
+  <arg name="bson_only_mode" default="true" />
+  <arg name="use_websocket" default="false" />
+
+  <!-- Launch rosbridge in tcp mode -->
+  <group unless="$(arg use_websocket)">
+
+    <include file="$(find rosbridge_server)/launch/rosbridge_tcp.launch" >
+      <arg name="port" value="$(arg port)" />
+      <arg name="host" value="$(arg host)" />
+      <arg name="bson_only_mode" value="$(arg bson_only_mode)" />
+    </include>
+
+  </group>
+
+  <!-- Launch rosbridge in websocket mode -->
+  <group if="$(arg use_websocket)">
+
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
+      <arg name="port" value="$(arg port)" />
+      <arg name="address" value="$(arg host)" />
+      <arg name="bson_only_mode" value="$(arg bson_only_mode)" />
+    </include>
+
+  </group>
+
+</launch>
