@@ -39,10 +39,10 @@ class Dropper(object):
             self.output_topic = self.input_topic + "_dropped"
 
         rospy.init_node(self.node_name, anonymous=True)
-        print("Started drop node '{}'".format(rospy.get_name()))
+        rospy.loginfo("Started drop node '{}'".format(rospy.get_name()))
 
         rospy.Subscriber(self.input_topic, rospy.AnyMsg, self.callback)
-        print("Subscribed to '{}'".format(self.input_topic))
+        rospy.loginfo("Subscribed to '{}'".format(self.input_topic))
 
         rospy.spin()
 
@@ -60,11 +60,11 @@ class Dropper(object):
 
             # Publish the message
             self.pub = rospy.Publisher(self.output_topic, msg_class, queue_size=10)
-            print("Advertised as '{}'".format(self.output_topic))
+            rospy.loginfo("Advertised as '{}'".format(self.output_topic))
             self.advertised = True
 
         if self.count >= self.x:
-            print("Publishing")
+            #rospy.logdebug("Publishing")
             self.pub.publish(data)
 
         self.count += 1
