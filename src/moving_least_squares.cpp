@@ -37,18 +37,17 @@ public:
 void MovingLeastSquares::cloudCallback (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 {
     // Container for original & filtered data
-    pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2; 
-    pcl::PCLPointCloud2ConstPtr cloudPtr(cloud);
+    pcl::PCLPointCloud2 cloud;
 
     // Convert to PCL data type
-    pcl_conversions::toPCL(*cloud_msg, *cloud);
+    pcl_conversions::toPCL(*cloud_msg, cloud);
 
     // Convert to dumbcloud
     pcl::PointCloud<pcl::PointXYZ>::Ptr dumb_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
     //pcl::MsgFieldMap field_map;
     //pcl::createMapping<pcl::PointXYZ>(cloud_msg->fields, field_map);
-    //pcl::fromPCLPointCloud2<pcl::PointXYZ>(*cloud, *dumb_cloud);
-    pcl::fromPCLPointCloud2<pcl::PointXYZ>(*cloud, *dumb_cloud);
+    //pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
+    pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
 
     // Create a KD-Tree
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -71,12 +70,12 @@ void MovingLeastSquares::cloudCallback (const sensor_msgs::PointCloud2ConstPtr& 
     mls.process (mls_points);
 
     // Convert from dumbcloud to cloud
-    pcl::PCLPointCloud2* cloud_filtered = new pcl::PCLPointCloud2;
-    pcl::toPCLPointCloud2(mls_points, *cloud_filtered);
+    pcl::PCLPointCloud2 cloud_filtered;
+    pcl::toPCLPointCloud2(mls_points, cloud_filtered);
 
     // Convert to ROS data type
     sensor_msgs::PointCloud2 output;
-    pcl_conversions::moveFromPCL(*cloud_filtered, output);
+    pcl_conversions::moveFromPCL(cloud_filtered, output);
 
     // Publish the data
     pub.publish (output);
