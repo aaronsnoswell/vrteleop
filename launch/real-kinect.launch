@@ -1,0 +1,25 @@
+<launch>
+
+  <!-- Launch kinect driver -->
+  <include file="$(find rdl_jaco_kinect2)/launch/driver.launch" />
+
+  <!-- Alias the point cloud -->
+  <node name="alias" pkg="topic_tools" type="drop"
+    args="/jaco_kinect2/sd/points 0 1 /pcl_stream" />
+
+  <!-- Launch rviz -->
+  <include file="$(find rdl_jaco_kinect2)/launch/rviz.launch" />
+
+  <!-- Launch RosBridge -->
+  <arg name="port" default="9090" />
+  <arg name="host" default="" />
+  <arg name="bson_only_mode" default="true" />
+  <arg name="use_websocket" default="false" />
+  <include file="$(find pcl_pipeline_utils)/launch/rosbridge.launch" >
+    <arg name="port" value="$(arg port)" />
+    <arg name="host" value="$(arg host)" />
+    <arg name="bson_only_mode" value="$(arg bson_only_mode)" />
+    <arg name="use_websocket" value="$(arg use_websocket)" />
+  </include>
+
+</launch>
