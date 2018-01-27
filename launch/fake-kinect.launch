@@ -2,13 +2,52 @@
 
   <param name="use_sim_time" value="true" />
 
-  <!-- Play a rosbag recording of the relevant topics -->
+  <!-- Arg to indicate if we're running on a non-gpu PC -->
+  <arg name="no_gpu" default="false" />
+
+  <!-- Bagfile to play -->
   <arg name="bagfile" default="$(find pcl_pipeline_utils)/bags/test_01.bag" />
-  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -l $(arg bagfile)" />
+
+  <!-- Play a rosbag recording of the relevant topics -->
+  <node pkg="rosbag" type="play" name="player" output="screen" unless="$(arg no_gpu)"
+    args="--clock --loop --quiet $(arg bagfile)"  />
 
   <!-- Alias the point cloud -->
-  <node name="alias" pkg="topic_tools" type="drop"
+  <node name="alias" pkg="topic_tools" type="drop" unless="$(arg no_gpu)"
     args="/jaco_kinect2/sd/points 0 1 /pcl_stream" />
+
+  <group if="$(arg no_gpu)">
+
+    <!-- Play a rosbag recording of the relevant topics -->
+    <node pkg="rosbag" type="play" name="player_nogpu" output="screen"
+      args="--clock --loop --quiet --rate=0.5 $(arg bagfile)" />
+
+    <!-- VoxelGrid filters for viewing on my crappy laptop with no GPU -->
+    <node pkg="nodelet" type="nodelet" name="debug_decimation"
+      args="standalone pcl/VoxelGrid" output="screen">
+      <remap from="~input" to="/jaco_kinect2/sd/points" />
+
+      <param name="filter_field_name" type="string" value="x" />
+      <param name="filter_limit_min" type="double" value="-0.2" />
+      <param name="filter_limit_max" type="double" value="0.2" />
+      <param name="filter_limit_negative" type="bool" value="false" />
+
+      <remap from="~output" to="/pcl_stream_debug1" />
+    </node>
+
+    <!-- VoxelGrid filters for viewing on my crappy laptop with no GPU -->
+    <node pkg="nodelet" type="nodelet" name="debug_decimation_2" args="standalone pcl/VoxelGrid" output="screen">
+      <remap from="~input" to="/pcl_stream_debug1" />
+
+      <param name="filter_field_name" type="string" value="y" />
+      <param name="filter_limit_min" type="double" value="-0.2" />
+      <param name="filter_limit_max" type="double" value="0.2" />
+      <param name="filter_limit_negative" type="bool" value="false" />
+
+      <remap from="~output" to="/pcl_stream" />
+    </node>
+
+  </group>
 
   <!-- Launch rviz -->
   <include file="$(find rdl_jaco_kinect2)/launch/rviz.launch" />
