@@ -3,4 +3,4 @@
 
 Header header
 pcl_pipeline_utils/HeaderlessPointCloud2 cloud
-uint32[] vertices
+pcl_pipeline_utils/Polygon[] polygons

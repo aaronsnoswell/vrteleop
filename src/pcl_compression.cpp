@@ -20,9 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pcl_pipeline_utils/CompressedPointCloud2.h"
 #include "pcl_utils.h"
-
+#include "pcl_pipeline_utils/CompressedPointCloud2.h"
 
 /**
  * Simple class to allow compression of a point cloud

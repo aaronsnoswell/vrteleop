@@ -61,4 +61,10 @@
     <remap from="output" to="/pipeline/06_decompressed" />
   </node>
 
+  <!-- Meshing -->
+  <node pkg="pcl_pipeline_utils" type="pcl_meshing" name="pipeline_meshing" output="screen" >
+    <remap from="input" to="/pipeline/06_decompressed" />
+    <remap from="output" to="/pipeline/07_meshed" />
+  </node>
+
 </launch>

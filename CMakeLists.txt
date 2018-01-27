@@ -20,6 +20,7 @@ add_message_files(
   CompressedPointCloud2.msg
   HeaderlessPointCloud2.msg
   PolygonMesh.msg
+  Polygon.msg
 )
 
 generate_messages(

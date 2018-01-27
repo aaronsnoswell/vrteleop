@@ -20,8 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pcl_pipeline_utils/CompressedPointCloud2.h"
 #include "pcl_utils.h"
+#include "pcl_pipeline_utils/CompressedPointCloud2.h"
 
 
 /**
@@ -65,7 +65,7 @@ void Decompression::cloudCallback(const pcl_pipeline_utils::CompressedPointCloud
 
     //Convert back to sensor_msgs::PointCloud2
     pcl::PCLPointCloud2 pcl_pc2;
-    pcl::toPCLPointCloud2 (*_pclCloud, pcl_pc2);
+    pcl::toPCLPointCloud2(*_pclCloud, pcl_pc2);
 
     pcl_conversions::fromPCL(pcl_pc2, *_outputMsg);
 
