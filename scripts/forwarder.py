@@ -71,7 +71,7 @@ def main():
     parser.add_argument("output_topic", type=str, nargs="?", default=None)
     args = parser.parse_args(rospy.myargv(sys.argv[1:]))
 
-    Forwarder(args.input_topic, args.x, args.y, args.output_topic)
+    Forwarder(args.input_topic, args.output_topic)
 
 
 if __name__ == '__main__':
