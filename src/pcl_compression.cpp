@@ -76,19 +76,19 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         _outputMsg.data = compressedData.str();
         pub.publish(_outputMsg);
 
-        long original_size = sizeof(msg->data);
-        int compressed_size = sizeof(_outputMsg);
-        ROS_INFO(
-            "Published cloud, original size %ld bytes, compressed size %d bytes, %03.2f%% of original.",
-            original_size,
-            compressed_size,
-            (float)compressed_size/(float)original_size*100
-        );
+        //long original_size = sizeof(msg->data);
+        //int compressed_size = sizeof(_outputMsg);
+        //ROS_INFO(
+        //    "Published cloud, original size %ld bytes, compressed size %d bytes, %03.2f%% of original.",
+        //    original_size,
+        //    compressed_size,
+        //    (float)compressed_size/(float)original_size*100
+        //);
     }
     else
     {
         ROS_INFO(
-            "Received input cloud but there are no subscribers - not publishing."
+            "Received input cloud but there are no subscribers - not publishing"
         );
     }
 }
