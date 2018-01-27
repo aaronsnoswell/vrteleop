@@ -70,7 +70,7 @@ int main (int argc, char** argv)
 {
     // Initialize ROS
     ros::init (argc, argv, "pcl_mls");
-    ros::NodeHandle nh("~");
+    ros::NodeHandle nh;
 
     // Read optional leaf_size argument
     double search_radius = 0.03;

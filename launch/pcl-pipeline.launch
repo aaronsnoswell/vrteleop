@@ -40,6 +40,14 @@
   </node>
   
   <!-- MLS Smoothing -->
+  <arg name="mls_search_radius" default="0.03" />
+  <node name="pipeline_smoothing" pkg="pcl_pipeline_utils" type="pcl_mls" output="screen" >
+    <remap from="input" to="/pipeline/03_outliers_removed" />
+
+    <param name="search_radius" type="double" value="$(arg mls_search_radius)" />
+
+    <remap from="output" to="/pipeline/04_smoothed" />
+  </node>
 
   <!-- Compression -->
 
