@@ -13,8 +13,8 @@
     args="--clock --loop --quiet $(arg bagfile)"  />
 
   <!-- Alias the point cloud -->
-  <node name="alias" pkg="topic_tools" type="drop" unless="$(arg no_gpu)"
-    args="/jaco_kinect2/sd/points 0 1 /pcl_stream" />
+  <node name="alias" pkg="pcl_pipeline_utils" type="forwarder" unless="$(arg no_gpu)"
+    args="/jaco_kinect2/sd/points /pcl_stream" />
 
   <group if="$(arg no_gpu)">
 

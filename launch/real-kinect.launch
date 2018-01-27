@@ -4,8 +4,8 @@
   <include file="$(find rdl_jaco_kinect2)/launch/driver.launch" />
 
   <!-- Alias the point cloud -->
-  <node name="alias" pkg="topic_tools" type="drop"
-    args="/jaco_kinect2/sd/points 0 1 /pcl_stream" />
+  <node name="alias" pkg="pcl_pipeline_utils" type="forwarder" unless="$(arg no_gpu)"
+    args="/jaco_kinect2/sd/points /pcl_stream" />
 
   <!-- Launch rviz -->
   <include file="$(find rdl_jaco_kinect2)/launch/rviz.launch" />
