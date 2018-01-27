@@ -1,14 +1,15 @@
 
 #include <ros/ros.h>
-
-// PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/surface/mls.h>
+
+#include "ros_msg_convert.h"
 
 
 /**
@@ -27,58 +28,38 @@ public:
 
     ros::Subscriber sub;
     ros::Publisher pub;
-    void cloudCallback (const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+    void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
 };
 
 
 /**
  * Callback that performs the Point Cloud downsapling
  */
-void MovingLeastSquares::cloudCallback (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
+void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-    // Container for original & filtered data
-    pcl::PCLPointCloud2 cloud;
-
-    // Convert to PCL data type
-    pcl_conversions::toPCL(*cloud_msg, cloud);
-
-    // Convert to dumbcloud
-    pcl::PointCloud<pcl::PointXYZ>::Ptr dumb_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
-    //pcl::MsgFieldMap field_map;
-    //pcl::createMapping<pcl::PointXYZ>(cloud_msg->fields, field_map);
-    //pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
-    pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
-
     // Create a KD-Tree
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
 
     // Output has the PointNormal type in order to store the normals calculated by MLS
     pcl::PointCloud<pcl::PointNormal> mls_points;
 
     // Init object (second point type is for the normals, even if unused)
     pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-
-    mls.setComputeNormals (true);
-
+    
     // Set parameters
-    mls.setInputCloud (dumb_cloud);
-    mls.setPolynomialFit (true);
-    mls.setSearchMethod (tree);
-    mls.setSearchRadius (_search_radius);
+    mls.setComputeNormals (true);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = ros_msg_convert::fromROSMsg(msg);
+    mls.setInputCloud(cloud);
+    mls.setPolynomialFit(true);
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(_search_radius);
 
     // Reconstruct
-    mls.process (mls_points);
+    mls.process(mls_points);
 
-    // Convert from dumbcloud to cloud
-    pcl::PCLPointCloud2 cloud_filtered;
-    pcl::toPCLPointCloud2(mls_points, cloud_filtered);
-
-    // Convert to ROS data type
-    sensor_msgs::PointCloud2 output;
-    pcl_conversions::moveFromPCL(cloud_filtered, output);
-
-    // Publish the data
-    pub.publish (output);
+    // Output
+    sensor_msgs::PointCloud2::Ptr out_cloud = ros_msg_convert::toROSMsg(mls_points);
+    pub.publish(out_cloud);
 }
 
 
@@ -101,7 +82,8 @@ int main (int argc, char** argv)
 
     // Create our filter
     MovingLeastSquares MovingLeastSquaresObj(search_radius);
-    const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = boost::bind(&MovingLeastSquares::cloudCallback, &MovingLeastSquaresObj, _1);
+    const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = \
+        boost::bind(&MovingLeastSquares::cloudCallback, &MovingLeastSquaresObj, _1);
 
     // Create a ROS subscriber for the input point cloud
     MovingLeastSquaresObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
