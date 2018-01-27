@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 # Build our Compressed Point Cloud message type
 add_message_files(
   FILES
-  CompressedPointCloud.msg
+  CompressedPointCloud2.msg
 )
 
 generate_messages(
