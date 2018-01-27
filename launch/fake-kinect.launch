@@ -13,7 +13,7 @@
     args="--clock --loop --quiet $(arg bagfile)"  />
 
   <!-- Alias the point cloud -->
-  <node name="alias" pkg="pcl_pipeline_utils" type="forwarder" unless="$(arg no_gpu)"
+  <node name="alias" pkg="pcl_pipeline_utils" type="forwarder.py" unless="$(arg no_gpu)"
     args="/jaco_kinect2/sd/points /pcl_stream" />
 
   <group if="$(arg no_gpu)">

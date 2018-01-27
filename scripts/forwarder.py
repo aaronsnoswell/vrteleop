@@ -7,6 +7,7 @@ A simple forwarder node
 import sys
 import rospy
 import argparse
+from importlib import import_module
 
 
 """
