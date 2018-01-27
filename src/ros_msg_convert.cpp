@@ -22,6 +22,16 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr ros_msg_convert::fromROSMsgRGB(const sens
 }
 
 
+pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr ros_msg_convert::fromROSMsgRGBNormal(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+    pcl::PCLPointCloud2 pcl_pc2;
+    pcl_conversions::toPCL(*msg, pcl_pc2);
+    pcl::fromPCLPointCloud2(pcl_pc2,*cloud);
+    return cloud;   
+}
+
+
 sensor_msgs::PointCloud2::Ptr ros_msg_convert::toROSMsg(pcl::PointCloud<pcl::PointXYZ>& cloud)
 {
     sensor_msgs::PointCloud2::Ptr msg(new sensor_msgs::PointCloud2);

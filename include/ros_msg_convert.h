@@ -22,6 +22,11 @@ namespace ros_msg_convert
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr fromROSMsgRGB(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
     /**
+     * Helper function to convert from sensor_msgs/PointCloud2 to pcl::PointCloud<pcl::PointXYZRGBNormal>
+     */
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr fromROSMsgRGBNormal(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    /**
      * Helper function to convert from pcl::PointCloud<pcl::PointXYZ> to sensor_msgs/PointCloud2
      */
     sensor_msgs::PointCloud2::Ptr toROSMsg(pcl::PointCloud<pcl::PointXYZ>& cloud);
