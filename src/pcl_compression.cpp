@@ -21,26 +21,25 @@
 #include <stdlib.h>
 
 #include "pcl_pipeline_utils/CompressedPointCloud.h"
-#include "compression_defs.h"
-#include "ros_msg_convert.h"
+#include "pcl_utils.h"
 
 
 /**
- * Simple class to allow copmression of a point cloud
+ * Simple class to allow compression of a point cloud
  * Originally from https://github.com/ChenxiTU/OctreeCompression4Ros
  */
 class Compression {
 private:
     
-    pcl::io::OctreePointCloudCompression<PointT>* _PointCloudEncoder;
-    pcl::PointCloud<PointT>::Ptr _pclCloud;
+    pcl::io::OctreePointCloudCompression<pcl_utils::PointT>* _PointCloudEncoder;
+    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
     pcl_pipeline_utils::CompressedPointCloud _outputMsg;
 
 public:
-    Compression(pcl::io::OctreePointCloudCompression<PointT>* PointCloudEncoder)
+    Compression(pcl::io::OctreePointCloudCompression<pcl_utils::PointT>* PointCloudEncoder)
         :
         _PointCloudEncoder(PointCloudEncoder),
-        _pclCloud(new pcl::PointCloud<PointT>)
+        _pclCloud(new pcl::PointCloud<pcl_utils::PointT>)
     {
         // Pass
     };
@@ -48,7 +47,7 @@ public:
 
     ros::Subscriber sub;
     ros::Publisher pub;
-    void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+    void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg);
 };
 
 
@@ -62,7 +61,7 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Stringstream to store compressed point cloud
         std::stringstream compressedData;
 
-        // Must convert from sensor_msg::PointCloud2 to pcl::PointCloud<PointT> for the encoder
+        // Must convert from sensor_msg::PointCloud2 to pcl::PointCloud<pcl_utils::PointT> for the encoder
         pcl::PCLPointCloud2 pcl_pc2;
         pcl_conversions::toPCL(*msg, pcl_pc2);
         pcl::fromPCLPointCloud2 (pcl_pc2, *_pclCloud);
@@ -94,7 +93,7 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 /**
  * Read a Compression Profile String from a node handle
  */
-pcl::io::compression_Profiles_e getCompressionProfile(ros::NodeHandle nh, ConfigurationProfile *c = 0)
+pcl::io::compression_Profiles_e getCompressionProfile(ros::NodeHandle nh, pcl_utils::ConfigurationProfile *c = 0)
 {
     std::string compression_profile;
     if(nh.getParam("profile", compression_profile))
@@ -162,15 +161,15 @@ pcl::io::compression_Profiles_e getCompressionProfile(ros::NodeHandle nh, Config
 int main (int argc, char** argv)
 {
     // Initialize ROS
-    ros::init (argc, argv, "pcl_compression");
+    ros::init(argc, argv, "pcl_compression");
     ros::NodeHandle nh, pnh("~");
 
-    ConfigurationProfile profile;
+    pcl_utils::ConfigurationProfile profile;
     pcl::io::compression_Profiles_e compressionProfile = getCompressionProfile(pnh, &profile);
 
     // Create our filter
     Compression MyObj(
-        new pcl::io::OctreePointCloudCompression<PointT>(
+        new pcl::io::OctreePointCloudCompression<pcl_utils::PointT>(
             compressionProfile,
             profile.showStatistics,
             profile.pointResolution,
@@ -185,10 +184,10 @@ int main (int argc, char** argv)
         boost::bind(&Compression::cloudCallback, &MyObj, _1);
 
     // Create a ROS subscriber for the input
-    MyObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
+    MyObj.sub = nh.subscribe<sensor_msgs::PointCloud2>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
-    MyObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud> ("/output", 10);
+    MyObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud>("/output", 10);
 
     // Spin
     ros::spin ();

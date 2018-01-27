@@ -21,8 +21,7 @@
 #include <stdlib.h>
 
 #include "pcl_pipeline_utils/CompressedPointCloud.h"
-#include "compression_defs.h"
-#include "ros_msg_convert.h"
+#include "pcl_utils.h"
 
 
 /**
@@ -32,15 +31,15 @@
 class Decompression {
 private:
     
-    pcl::io::OctreePointCloudCompression<PointT>* _PointCloudDecoder;
-    pcl::PointCloud<PointT>::Ptr _pclCloud;
+    pcl::io::OctreePointCloudCompression<pcl_utils::PointT>* _PointCloudDecoder;
+    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
     sensor_msgs::PointCloud2::Ptr _outputMsg;
 
 public:
     Decompression()
         :
-        _PointCloudDecoder(new pcl::io::OctreePointCloudCompression<PointT>),
-        _pclCloud(new pcl::PointCloud<PointT>),
+        _PointCloudDecoder(new pcl::io::OctreePointCloudCompression<pcl_utils::PointT>),
+        _pclCloud(new pcl::PointCloud<pcl_utils::PointT>),
         _outputMsg(new sensor_msgs::PointCloud2)
     {
         // Pass
@@ -92,7 +91,7 @@ void Decompression::cloudCallback(const pcl_pipeline_utils::CompressedPointCloud
 int main (int argc, char** argv)
 {
     // Initialize ROS
-    ros::init (argc, argv, "pcl_compression");
+    ros::init(argc, argv, "pcl_compression");
     ros::NodeHandle nh, pnh("~");
 
     // Create our filter
@@ -101,11 +100,11 @@ int main (int argc, char** argv)
         boost::bind(&Decompression::cloudCallback, &MyObj, _1);
 
     // Create a ROS subscriber for the input
-    MyObj.sub = nh.subscribe<pcl_pipeline_utils::CompressedPointCloud> ("/input", 10, boundCloudCallback);
+    MyObj.sub = nh.subscribe<pcl_pipeline_utils::CompressedPointCloud>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
-    MyObj.pub = nh.advertise<sensor_msgs::PointCloud2> ("/output", 10);
+    MyObj.pub = nh.advertise<sensor_msgs::PointCloud2>("/output", 10);
 
     // Spin
-    ros::spin ();
+    ros::spin();
 }

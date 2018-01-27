@@ -8,7 +8,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/surface/mls.h>
 
-#include "ros_msg_convert.h"
+#include "pcl_utils.h"
 
 
 /**
@@ -47,7 +47,7 @@ void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& m
     
     // Set parameters
     mls.setComputeNormals (true);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud = ros_msg_convert::fromROSMsgRGB(msg);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud = pcl_utils::fromROSMsgRGB(msg);
     mls.setInputCloud(cloud);
     mls.setPolynomialFit(true);
     mls.setSearchMethod(tree);
@@ -57,7 +57,7 @@ void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& m
     mls.process(mls_points);
 
     // Output
-    sensor_msgs::PointCloud2::Ptr out_cloud = ros_msg_convert::toROSMsg(mls_points);
+    sensor_msgs::PointCloud2::Ptr out_cloud = pcl_utils::toROSMsg(mls_points);
     pub.publish(out_cloud);
 }
 
