@@ -50,5 +50,9 @@
   </node>
 
   <!-- Compression -->
+  <node pkg="pcl_pipeline_utils" type="pcl_compression" name="pipeline_compression" output="screen" >
+    <remap from="input" to="/pipeline/04_smoothed" />
+    <remap from="output" to="/pipeline/05_compressed" />
+  </node>
 
 </launch>

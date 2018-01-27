@@ -1,87 +1,204 @@
 
 #include <ros/ros.h>
-
-// PCL specific includes
+#include <ros/console.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/String.h>
+
+#include <pcl_ros/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/surface/mls.h>
+#include <pcl/conversions.h>
+#include <pcl/common/common.h>
+#include <pcl/common/common_headers.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/compression/octree_pointcloud_compression.h>
+
+#include <iostream>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "compressedpointcloud.h"
+#include "ros_msg_convert.h"
+
+
+typedef pcl::PointXYZRGB PointT;
 
 
 /**
- * Simple class to compress a point cloud
- * Based on http://pointclouds.org/documentation/tutorials/compression.php#octree-compression
- *
- * TODO Implement this!
+ * Simple class to allow copmression of a point cloud
+ * Originally from https://github.com/ChenxiTU/OctreeCompression4Ros
  */
-class MovingLeastSquares {
+class Compression {
 private:
-    double _search_radius;
+    
+    compressed_pointcloud_transport::CompressedPointCloud _outputMsg;
+    pcl::io::OctreePointCloudCompression<PointT>* _PointCloudEncoder;
+    pcl::PointCloud<PointT>::Ptr _pclCloud;
 
 public:
-    MovingLeastSquares(double search_radius = 0.03)
-        : _search_radius(search_radius)
+    Compression(pcl::io::OctreePointCloudCompression<PointT>* PointCloudEncoder)
+        :
+        _PointCloudEncoder(PointCloudEncoder),
+        _pclCloud(new pcl::PointCloud<PointT>)
     {
         // Pass
     };
 
+
     ros::Subscriber sub;
     ros::Publisher pub;
-    void cloudCallback (const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+    void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
 };
 
 
 /**
  * Callback that performs the Point Cloud downsapling
  */
-void MovingLeastSquares::cloudCallback (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
+void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-    // Container for original & filtered data
-    pcl::PCLPointCloud2 cloud;
+    if(pub.getNumSubscribers())
+    {
+        // Stringstream to store compressed point cloud
+        std::stringstream compressedData;
 
-    // Convert to PCL data type
-    pcl_conversions::toPCL(*cloud_msg, cloud);
+        // Must convert from sensor_msg::PointCloud2 to pcl::PointCloud<PointT> for the encoder
+        pcl::PCLPointCloud2 pcl_pc2;
+        pcl_conversions::toPCL(*msg, pcl_pc2);
+        pcl::fromPCLPointCloud2 (pcl_pc2, *_pclCloud);
 
-    // Convert to dumbcloud
-    pcl::PointCloud<pcl::PointXYZ>::Ptr dumb_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
-    //pcl::MsgFieldMap field_map;
-    //pcl::createMapping<pcl::PointXYZ>(cloud_msg->fields, field_map);
-    //pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
-    pcl::fromPCLPointCloud2<pcl::PointXYZ>(cloud, *dumb_cloud);
+        _PointCloudEncoder->encodePointCloud (_pclCloud, compressedData);
 
-    // Create a KD-Tree
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+        _outputMsg.header = msg->header;
+        _outputMsg.data = compressedData.str();
+        pub.publish(_outputMsg);
 
-    // Output has the PointNormal type in order to store the normals calculated by MLS
-    pcl::PointCloud<pcl::PointNormal> mls_points;
+        long original_size = sizeof(msg->data);
+        int compressed_size = sizeof(_outputMsg);
+        ROS_INFO_NAMED(
+            "compressor",
+            "Published cloud, original size %ld bytes, compressed size %d bytes, %.3f of original.",
+            original_size,
+            compressed_size,
+            (float)compressed_size/(float)original_size
+        );
+    }
+    else
+    {
+        ROS_INFO_NAMED(
+            "compressor",
+            "Received input cloud but there are no subscribers - not publishing."
+        );
+    }
 
-    // Init object (second point type is for the normals, even if unused)
-    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+    /*
+    // Convert input
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud = ros_msg_convert::fromROSMsgRGBNormal(msg);
 
-    mls.setComputeNormals (true);
+    std::stringstream compressedData;
+    PointCloudEncoder->encodePointCloud(cloud, compressedData);
 
-    // Set parameters
-    mls.setInputCloud (dumb_cloud);
-    mls.setPolynomialFit (true);
-    mls.setSearchMethod (tree);
-    mls.setSearchRadius (_search_radius);
+    // Measure size of compressed blob
+    string compressedDataStr = compressedData.str();
+    compressedData.seekg(0, ios::end);
+    int size = compressedData.tellg();
 
-    // Reconstruct
-    mls.process (mls_points);
+    // Copy to a std_msgs/ByteMultiArray
+    outputMsg.data.clear();
+    for(int i=0; i<size; i++)
+    {
+        outputMsg.data.push_back(compressedDataStr.c_str()[i]);
+    }
+    */
+}
 
-    // Convert from dumbcloud to cloud
-    pcl::PCLPointCloud2 cloud_filtered;
-    pcl::toPCLPointCloud2(mls_points, cloud_filtered);
+struct ConfigurationProfile
+{
+    bool showStatistics;
+    double pointResolution;
+    float octreeResolution;
+    bool doVoxelGridDownDownSampling;
+    unsigned int iFrameRate;
+    bool doColorEncoding;
+    unsigned int colorBitResolution;
 
-    // Convert to ROS data type
-    sensor_msgs::PointCloud2 output;
-    pcl_conversions::moveFromPCL(cloud_filtered, output);
+    ConfigurationProfile()
+    {
+        showStatistics = false;
+        pointResolution = 0.03;
+        octreeResolution = 0.03f;
+        doVoxelGridDownDownSampling = true;
+        iFrameRate = 100;
+        doColorEncoding = true;
+        colorBitResolution = 4;
+    }
+};
 
-    // Publish the data
-    pub.publish (output);
+
+/**
+ * Read a Compression Profile String from a node handle
+ */
+pcl::io::compression_Profiles_e getCompressionProfile(ros::NodeHandle nh, ConfigurationProfile *c = 0)
+{
+    std::string compression_profile;
+    if(nh.getParam("profile", compression_profile))
+    {
+        if(compression_profile == "LOW_RES_ONLINE_COMPRESSION_WITHOUT_COLOR")        return pcl::io::LOW_RES_ONLINE_COMPRESSION_WITHOUT_COLOR;
+        else if(compression_profile == "LOW_RES_ONLINE_COMPRESSION_WITH_COLOR")      return pcl::io::LOW_RES_ONLINE_COMPRESSION_WITH_COLOR;
+        else if(compression_profile == "MED_RES_ONLINE_COMPRESSION_WITHOUT_COLOR")   return pcl::io::MED_RES_ONLINE_COMPRESSION_WITHOUT_COLOR;
+        else if(compression_profile == "MED_RES_ONLINE_COMPRESSION_WITH_COLOR")      return pcl::io::MED_RES_ONLINE_COMPRESSION_WITH_COLOR;
+        else if(compression_profile == "HIGH_RES_ONLINE_COMPRESSION_WITHOUT_COLOR")  return pcl::io::HIGH_RES_ONLINE_COMPRESSION_WITHOUT_COLOR;
+        else if(compression_profile == "HIGH_RES_ONLINE_COMPRESSION_WITH_COLOR")     return pcl::io::HIGH_RES_ONLINE_COMPRESSION_WITH_COLOR;
+        else if(compression_profile == "LOW_RES_OFFLINE_COMPRESSION_WITHOUT_COLOR")  return pcl::io::LOW_RES_OFFLINE_COMPRESSION_WITHOUT_COLOR;
+        else if(compression_profile == "LOW_RES_OFFLINE_COMPRESSION_WITH_COLOR")     return pcl::io::LOW_RES_OFFLINE_COMPRESSION_WITH_COLOR;
+        else if(compression_profile == "HIGH_RES_OFFLINE_COMPRESSION_WITHOUT_COLOR") return pcl::io::HIGH_RES_OFFLINE_COMPRESSION_WITHOUT_COLOR;
+        else if(compression_profile == "HIGH_RES_OFFLINE_COMPRESSION_WITH_COLOR")    return pcl::io::HIGH_RES_OFFLINE_COMPRESSION_WITH_COLOR;
+        else return pcl::io::MED_RES_ONLINE_COMPRESSION_WITH_COLOR;
+    }
+    else
+    {   
+        if(c != 0)
+        {   
+            if(nh.hasParam("showStatistics"))
+            {
+                nh.getParam("showStatistics", c->showStatistics);
+            }
+            
+            if(nh.hasParam("pointResolution"))
+            {
+                nh.getParam("pointResolution", c->pointResolution);
+            }
+
+            if(nh.hasParam("octreeResolution"))
+            {
+                nh.getParam("octreeResolution", c->octreeResolution);
+            }
+
+            if(nh.hasParam("doVoxelGridDownDownSampling"))
+            {
+                nh.getParam("doVoxelGridDownDownSampling", c->doVoxelGridDownDownSampling);
+            }
+
+            if(nh.hasParam("iFrameRate"))
+            {
+                nh.getParam("iFrameRate", (int &)(c->iFrameRate));
+            }
+
+            if(nh.hasParam("doColorEncoding"))
+            {
+                nh.getParam("doColorEncoding", c->doColorEncoding);
+            }
+
+            if(nh.hasParam("colorBitResolution"))
+            {
+                nh.getParam("colorBitResolution", (int &)(c->colorBitResolution));
+            }
+        }
+
+        return pcl::io::MANUAL_CONFIGURATION;
+    }
 }
 
 
@@ -91,26 +208,33 @@ void MovingLeastSquares::cloudCallback (const sensor_msgs::PointCloud2ConstPtr& 
 int main (int argc, char** argv)
 {
     // Initialize ROS
-    ros::init (argc, argv, "pcl_mls");
-    ros::NodeHandle nh("~");
+    ros::init (argc, argv, "pcl_compression");
+    ros::NodeHandle nh, pnh("~");
 
-    // Read optional leaf_size argument
-    double search_radius = 0.03;
-    if (nh.hasParam("search_radius"))
-    {
-        nh.getParam("search_radius", search_radius);
-        ROS_INFO("Using %0.4f as search radius", search_radius);
-    }
+    ConfigurationProfile profile;
+    pcl::io::compression_Profiles_e compressionProfile = getCompressionProfile(pnh, &profile);
 
     // Create our filter
-    MovingLeastSquares MovingLeastSquaresObj(search_radius);
-    const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = boost::bind(&MovingLeastSquares::cloudCallback, &MovingLeastSquaresObj, _1);
+    Compression CompressionObj(
+        new pcl::io::OctreePointCloudCompression<PointT>(
+            compressionProfile,
+            profile.showStatistics,
+            profile.pointResolution,
+            profile.octreeResolution,
+            profile.doVoxelGridDownDownSampling,
+            profile.iFrameRate,
+            profile.doColorEncoding,
+            static_cast<unsigned char> (profile.colorBitResolution)
+        )
+    );
+    const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = \
+        boost::bind(&Compression::cloudCallback, &CompressionObj, _1);
 
     // Create a ROS subscriber for the input point cloud
-    MovingLeastSquaresObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
+    CompressionObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output point cloud
-    MovingLeastSquaresObj.pub = nh.advertise<sensor_msgs::PointCloud2> ("/output", 10);
+    CompressionObj.pub = nh.advertise<compressed_pointcloud_transport::CompressedPointCloud> ("/output", 10);
 
     // Spin
     ros::spin ();
