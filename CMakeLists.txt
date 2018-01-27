@@ -60,3 +60,11 @@ add_executable(pcl_decompression
 target_link_libraries(pcl_decompression
   ${catkin_LIBRARIES}
 )
+
+## Grab Meshing
+add_executable(pcl_meshing
+  src/pcl_meshing.cpp
+)
+target_link_libraries(pcl_meshing
+  ${catkin_LIBRARIES}
+)

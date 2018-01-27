@@ -26,15 +26,22 @@
 /**
  * Simple class to allow meshing of a point cloud
  */
-class Meshing {
-private:
-    
-    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
-    //pcl_pipeline_utils::CompressedPointCloud _outputMsg;
-
+class Meshing
+{
 public:
-    Meshing()
+    
+    enum EMeshMethod
+    {
+        GreedyProjection,
+        Poisson,
+        MarchingCubesRBF,
+        MarchingCubesHoppe,
+        ConvexHull
+    };
+
+    Meshing(EMeshMethod method=GreedyProjection)
         :
+        _method(method),
         _pclCloud(new pcl::PointCloud<pcl_utils::PointT>)
     {
         // Pass
@@ -44,6 +51,11 @@ public:
     ros::Subscriber sub;
     ros::Publisher pub;
     void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg);
+
+private:
+    EMeshMethod _method;
+    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
+    //pcl_pipeline_utils::CompressedPointCloud _outputMsg;
 };
 
 
@@ -57,7 +69,50 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Convert from sensor_msg::PointCloud2 to pcl::PointCloud<pcl_utils::PointT>
         pcl::PCLPointCloud2 pcl_pc2;
         pcl_conversions::toPCL(*msg, pcl_pc2);
-        pcl::fromPCLPointCloud2 (pcl_pc2, *_pclCloud);
+        pcl::fromPCLPointCloud2(pcl_pc2, *_pclCloud);
+
+        switch(_method)
+        {
+            case GreedyProjection:
+            {
+                
+                break;
+            }
+            case Poisson:
+            {
+                ROS_WARN(
+                    "Poisson meshing method not implemented yet"
+                );
+                break;
+            }
+            case MarchingCubesRBF:
+            {
+                ROS_WARN(
+                    "Marching Cubes RBF meshing method not implemented yet"
+                );
+                break;
+            }
+            case MarchingCubesHoppe:
+            {
+                ROS_WARN(
+                    "Marching Cubes Hoppe meshing method not implemented yet"
+                );
+                break;
+            }
+            case ConvexHull:
+            {
+                ROS_WARN(
+                    "Convex Hull meshing method not implemented yet"
+                );
+                break;
+            }
+            default:
+            {
+                ROS_WARN(
+                    "Unknown meshing method requested"
+                );
+            }
+        }
 
     }
     else
