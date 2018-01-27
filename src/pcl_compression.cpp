@@ -21,11 +21,8 @@
 #include <stdlib.h>
 
 #include "pcl_pipeline_utils/CompressedPointCloud.h"
-//#include "compressedpointcloud.h"
+#include "compression_defs.h"
 #include "ros_msg_convert.h"
-
-
-typedef pcl::PointXYZRGB PointT;
 
 
 /**
@@ -35,9 +32,9 @@ typedef pcl::PointXYZRGB PointT;
 class Compression {
 private:
     
-    pcl_pipeline_utils::CompressedPointCloud _outputMsg;
     pcl::io::OctreePointCloudCompression<PointT>* _PointCloudEncoder;
     pcl::PointCloud<PointT>::Ptr _pclCloud;
+    pcl_pipeline_utils::CompressedPointCloud _outputMsg;
 
 public:
     Compression(pcl::io::OctreePointCloudCompression<PointT>* PointCloudEncoder)
@@ -56,7 +53,7 @@ public:
 
 
 /**
- * Callback that performs the Point Cloud downsapling
+ * Callback that performs the Point Cloud compression
  */
 void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
@@ -76,13 +73,13 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         _outputMsg.data = compressedData.str();
         pub.publish(_outputMsg);
 
-        long original_size = msg->data.size();
-        int compressed_size = _outputMsg.data.size();
+        float original_size = msg->data.size() / 1024.0f;
+        float compressed_size = _outputMsg.data.size() / 1024.0f;
         ROS_INFO(
-           "Published cloud, original size %ld bytes, compressed size %d bytes, %03.2f%% of original.",
+           "Published cloud, original %.2fKiB, compressed %.2fKiB (%03.2f%% of original)",
            original_size,
            compressed_size,
-           (float)compressed_size/(float)original_size*100
+           (float)compressed_size / (float)original_size * 100
         );
     }
     else
@@ -92,28 +89,6 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         );
     }
 }
-
-struct ConfigurationProfile
-{
-    bool showStatistics;
-    double pointResolution;
-    float octreeResolution;
-    bool doVoxelGridDownDownSampling;
-    unsigned int iFrameRate;
-    bool doColorEncoding;
-    unsigned int colorBitResolution;
-
-    ConfigurationProfile()
-    {
-        showStatistics = false;
-        pointResolution = 0.03;
-        octreeResolution = 0.03f;
-        doVoxelGridDownDownSampling = true;
-        iFrameRate = 100;
-        doColorEncoding = true;
-        colorBitResolution = 4;
-    }
-};
 
 
 /**
@@ -194,7 +169,7 @@ int main (int argc, char** argv)
     pcl::io::compression_Profiles_e compressionProfile = getCompressionProfile(pnh, &profile);
 
     // Create our filter
-    Compression CompressionObj(
+    Compression MyObj(
         new pcl::io::OctreePointCloudCompression<PointT>(
             compressionProfile,
             profile.showStatistics,
@@ -207,13 +182,13 @@ int main (int argc, char** argv)
         )
     );
     const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = \
-        boost::bind(&Compression::cloudCallback, &CompressionObj, _1);
+        boost::bind(&Compression::cloudCallback, &MyObj, _1);
 
-    // Create a ROS subscriber for the input point cloud
-    CompressionObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
+    // Create a ROS subscriber for the input
+    MyObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
 
-    // Create a ROS publisher for the output point cloud
-    CompressionObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud> ("/output", 10);
+    // Create a ROS publisher for the output
+    MyObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud> ("/output", 10);
 
     // Spin
     ros::spin ();

@@ -55,4 +55,10 @@
     <remap from="output" to="/pipeline/05_compressed" />
   </node>
 
+  <!-- Decompression -->
+  <node pkg="pcl_pipeline_utils" type="pcl_decompression" name="pipeline_decompression" output="screen" >
+    <remap from="input" to="/pipeline/05_compressed" />
+    <remap from="output" to="/pipeline/06_decompressed" />
+  </node>
+
 </launch>

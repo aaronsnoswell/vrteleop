@@ -52,6 +52,12 @@ add_executable(pcl_compression
 target_link_libraries(pcl_compression
   ${catkin_LIBRARIES}
 )
-add_dependencies(pcl_compression
-  pcl_pipeline_utils_generate_message_cpp
+
+## Grab Decompression
+add_executable(pcl_decompression
+  src/pcl_decompression.cpp
+  src/ros_msg_convert.cpp
+)
+target_link_libraries(pcl_decompression
+  ${catkin_LIBRARIES}
 )
