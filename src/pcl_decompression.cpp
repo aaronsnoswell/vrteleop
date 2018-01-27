@@ -77,7 +77,7 @@ void Decompression::cloudCallback(const pcl_pipeline_utils::CompressedPointCloud
 
     float original_size = msg->data.size() / 1024;
     float inflated_size = _outputMsg->data.size() / 1024;
-    ROS_INFO(
+    ROS_DEBUG(
        "Published cloud, original %.2fKiB, inflated %.2fKiB",
        original_size,
        inflated_size
