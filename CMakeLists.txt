@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
+catkin_package()
+
 ## Grab any includes
 include_directories(
   include
@@ -20,14 +22,15 @@ include_directories(
 )
 
 ## Grab MLS
-add_executable(pcl_moving_least_squares
+add_executable(pcl_smoothing
   src/pcl_moving_least_squares.cpp
   src/ros_msg_convert.cpp
 )
-target_link_libraries(pcl_moving_least_squares ${catkin_LIBRARIES})
+target_link_libraries(pcl_smoothing ${catkin_LIBRARIES})
 
 ## Grab Compression
 add_executable(pcl_compression
   src/pcl_compression.cpp
+  src/ros_msg_convert.cpp
 )
 target_link_libraries(pcl_compression ${catkin_LIBRARIES})

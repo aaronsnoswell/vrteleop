@@ -5,7 +5,6 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/surface/mls.h>
 
@@ -69,7 +68,7 @@ void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& m
 int main (int argc, char** argv)
 {
     // Initialize ROS
-    ros::init (argc, argv, "pcl_mls");
+    ros::init (argc, argv, "pcl_smoothing");
     ros::NodeHandle nh;
 
     // Read optional leaf_size argument
