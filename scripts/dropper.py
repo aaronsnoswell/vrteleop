@@ -64,7 +64,6 @@ class Dropper(object):
             self.advertised = True
 
         if self.count >= self.x:
-            #rospy.logdebug("Publishing")
             self.pub.publish(data)
 
         self.count += 1
