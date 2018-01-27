@@ -11,9 +11,25 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_conversions
   pcl_ros
+  message_generation
 )
 
-catkin_package()
+# Build our Compressed Point Cloud message type
+add_message_files(
+  FILES
+  CompressedPointCloud.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS
+  message_runtime
+  std_msgs
+)
 
 ## Grab any includes
 include_directories(
@@ -33,4 +49,9 @@ add_executable(pcl_compression
   src/pcl_compression.cpp
   src/ros_msg_convert.cpp
 )
-target_link_libraries(pcl_compression ${catkin_LIBRARIES})
+target_link_libraries(pcl_compression
+  ${catkin_LIBRARIES}
+)
+add_dependencies(pcl_compression
+  pcl_pipeline_utils_generate_message_cpp
+)

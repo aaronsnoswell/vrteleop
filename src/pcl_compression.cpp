@@ -20,7 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "compressedpointcloud.h"
+#include "pcl_pipeline_utils/CompressedPointCloud.h"
+//#include "compressedpointcloud.h"
 #include "ros_msg_convert.h"
 
 
@@ -34,7 +35,7 @@ typedef pcl::PointXYZRGB PointT;
 class Compression {
 private:
     
-    compressed_pointcloud_transport::CompressedPointCloud _outputMsg;
+    pcl_pipeline_utils::CompressedPointCloud _outputMsg;
     pcl::io::OctreePointCloudCompression<PointT>* _PointCloudEncoder;
     pcl::PointCloud<PointT>::Ptr _pclCloud;
 
@@ -69,7 +70,7 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         pcl_conversions::toPCL(*msg, pcl_pc2);
         pcl::fromPCLPointCloud2 (pcl_pc2, *_pclCloud);
 
-        _PointCloudEncoder->encodePointCloud (_pclCloud, compressedData);
+        _PointCloudEncoder->encodePointCloud(_pclCloud, compressedData);
 
         _outputMsg.header = msg->header;
         _outputMsg.data = compressedData.str();
@@ -77,41 +78,19 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
         long original_size = sizeof(msg->data);
         int compressed_size = sizeof(_outputMsg);
-        ROS_INFO_NAMED(
-            "compressor",
-            "Published cloud, original size %ld bytes, compressed size %d bytes, %.3f of original.",
+        ROS_INFO(
+            "Published cloud, original size %ld bytes, compressed size %d bytes, %03.2f%% of original.",
             original_size,
             compressed_size,
-            (float)compressed_size/(float)original_size
+            (float)compressed_size/(float)original_size*100
         );
     }
     else
     {
-        ROS_INFO_NAMED(
-            "compressor",
+        ROS_INFO(
             "Received input cloud but there are no subscribers - not publishing."
         );
     }
-
-    /*
-    // Convert input
-    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud = ros_msg_convert::fromROSMsgRGBNormal(msg);
-
-    std::stringstream compressedData;
-    PointCloudEncoder->encodePointCloud(cloud, compressedData);
-
-    // Measure size of compressed blob
-    string compressedDataStr = compressedData.str();
-    compressedData.seekg(0, ios::end);
-    int size = compressedData.tellg();
-
-    // Copy to a std_msgs/ByteMultiArray
-    outputMsg.data.clear();
-    for(int i=0; i<size; i++)
-    {
-        outputMsg.data.push_back(compressedDataStr.c_str()[i]);
-    }
-    */
 }
 
 struct ConfigurationProfile
@@ -234,7 +213,7 @@ int main (int argc, char** argv)
     CompressionObj.sub = nh.subscribe<sensor_msgs::PointCloud2> ("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output point cloud
-    CompressionObj.pub = nh.advertise<compressed_pointcloud_transport::CompressedPointCloud> ("/output", 10);
+    CompressionObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud> ("/output", 10);
 
     // Spin
     ros::spin ();
