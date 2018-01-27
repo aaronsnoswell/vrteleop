@@ -38,17 +38,17 @@ public:
 void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
     // Create a KD-Tree
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
 
     // Output has the PointNormal type in order to store the normals calculated by MLS
-    pcl::PointCloud<pcl::PointNormal> mls_points;
+    pcl::PointCloud<pcl::PointXYZRGBNormal> mls_points;
 
     // Init object (second point type is for the normals, even if unused)
-    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+    pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
     
     // Set parameters
     mls.setComputeNormals (true);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = ros_msg_convert::fromROSMsg(msg);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud = ros_msg_convert::fromROSMsgRGB(msg);
     mls.setInputCloud(cloud);
     mls.setPolynomialFit(true);
     mls.setSearchMethod(tree);
