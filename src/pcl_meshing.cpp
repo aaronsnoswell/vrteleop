@@ -18,6 +18,7 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/surface/organized_fast_mesh.h>
 #include <pcl/surface/gp3.h>
+#include <pcl/surface/poisson.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
 
@@ -94,11 +95,33 @@ public:
     Meshing(MeshingConfiguration_t config)
         :
         _config(config),
-        _pclCloud(new pcl::PointCloud<pcl::PointXYZ>),
+        _pclCloud(new pcl::PointCloud<pcl_utils::PointT>),
         _outputMsgPointCloud2(new sensor_msgs::PointCloud2),
         _outputMsg(new pcl_pipeline_utils::PolygonMesh)
     {
-        // Pass
+        switch(_config.method)
+        {
+            case GreedyProjection:
+            {
+                ROS_INFO(
+                    "Initializing mesher with mode GreedyProjection"
+                );
+                break;
+            }
+            case Poisson:
+            {
+                ROS_INFO(
+                    "Initializing mesher with mode Poisson"
+                );
+                break;
+            }
+            default:
+            {
+                ROS_WARN(
+                    "Error: Initialized Mesher with unimplemented mode"
+                );
+            }
+        }
     };
 
 
@@ -110,7 +133,7 @@ public:
 
 private:
     MeshingConfiguration _config;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr _pclCloud;
+    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
     sensor_msgs::PointCloud2::Ptr _outputMsgPointCloud2;
     pcl_pipeline_utils::PolygonMesh::Ptr _outputMsg;
 };
@@ -130,9 +153,9 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
         // Estimate normals
         // NB: We have previously done this, but the compression step discards this info
-        pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> n;
+        pcl::NormalEstimation<pcl_utils::PointT, pcl::PointNormal> n;
         pcl::PointCloud<pcl::PointNormal>::Ptr normalCloud(new pcl::PointCloud<pcl::PointNormal>);
-        pcl::search::KdTree<pcl::PointXYZ>::Ptr normalEstimationTree(new pcl::search::KdTree<pcl::PointXYZ>);
+        pcl::search::KdTree<pcl_utils::PointT>::Ptr normalEstimationTree(new pcl::search::KdTree<pcl_utils::PointT>);
         normalEstimationTree->setInputCloud(_pclCloud);
         n.setInputCloud(_pclCloud);
         n.setSearchMethod(normalEstimationTree);
@@ -142,8 +165,8 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Concatenate the XYZ and normal fields
         // NB: The order you pass the parameters to pcl::concatenateFields matters!
         // If you pass normalCloud second, it's x, y, z fields (that are 0) are copied over to the output!
-        pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointNormal>());
-        pcl::concatenateFields(*normalCloud, *_pclCloud, *cloud_with_normals);
+        pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr combined_cloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>());
+        pcl::concatenateFields(*normalCloud, *_pclCloud, *combined_cloud);
 
         // Initialize mesh
         pcl::PolygonMesh mesh;
@@ -155,11 +178,11 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             {
 
                 // Use Greedy Projection Triangulation
-                pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
+                pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
 
                 // Create search tree
-                pcl::search::KdTree<pcl::PointNormal>::Ptr meshTree(new pcl::search::KdTree<pcl::PointNormal>);
-                meshTree->setInputCloud(cloud_with_normals);
+                pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr meshTree(new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
+                meshTree->setInputCloud(combined_cloud);
 
                 // Set configurable parameters
                 gp3.setSearchRadius(_config.greedy_search_radius);
@@ -173,29 +196,27 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 gp3.setNormalConsistency(true);
                 gp3.setConsistentVertexOrdering(true);
 
-                // Get result
-                gp3.setInputCloud(cloud_with_normals);
+                // Do the meshing
+                gp3.setInputCloud(combined_cloud);
                 gp3.setSearchMethod(meshTree);
                 gp3.reconstruct(mesh);
 
                 // Additional vertex information
-                std::vector<int> parts = gp3.getPartIDs();
-                std::vector<int> states = gp3.getPointStates();
+                //std::vector<int> parts = gp3.getPartIDs();
+                //std::vector<int> states = gp3.getPointStates();
 
                 break;
             }
             case Poisson:
             {
-                ROS_WARN(
-                    "Poisson meshing method not implemented yet"
-                );
-
-                //Poisson<pcl::PointNormal> poisson;
+                pcl::Poisson<pcl::PointXYZRGBNormal> poisson;
 
                 // Set configurable parameters
-                //poisson.setDepth(_config.poisson_depth);
-                //poisson.setInputCloud (cloud_with_normals);
-                //poisson.reconstruct(mesh);
+                poisson.setDepth(_config.poisson_depth);
+
+                // Do the meshing
+                poisson.setInputCloud(combined_cloud);
+                poisson.reconstruct(mesh);
 
                 break;
             }
@@ -235,7 +256,7 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
         // Convert to PolygonMesh message format
         pcl::PCLPointCloud2 pcl_pc2_out;
-        pcl::toPCLPointCloud2(*cloud_with_normals, pcl_pc2_out);
+        pcl::toPCLPointCloud2(*combined_cloud, pcl_pc2_out);
         pcl_conversions::fromPCL(pcl_pc2_out, *_outputMsgPointCloud2);
 
         // Copy header
@@ -313,7 +334,7 @@ int main (int argc, char** argv)
     ros::NodeHandle nh, pnh("~");
 
     // Create our filter
-    Meshing MyObj(Meshing::getConfiguration(nh));
+    Meshing MyObj(Meshing::getConfiguration(pnh));
     const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = \
         boost::bind(&Meshing::cloudCallback, &MyObj, _1);
 
