@@ -17,7 +17,7 @@
     <remap from="~input" to="/pipeline/01_throttled" />
 
     <param name="filter_field_name" type="string" value="z" />
-    <param name="filter_limit_min" type="double" value="0.3" />
+    <param name="filter_limit_min" type="double" value="0.4" />
     <param name="filter_limit_max" type="double" value="5" />
     <param name="filter_limit_negative" type="bool" value="false" />
     <param name="leaf_size" type="double" value="$(arg decimation_leafsize_m)" />
@@ -50,8 +50,12 @@
   </node>
 
   <!-- Compression -->
+  <arg name="compression_profile" default="HIGH_RES_ONLINE_COMPRESSION_WITH_COLOR" />
   <node pkg="pcl_pipeline_utils" type="pcl_compression" name="pipeline_compression" output="screen" >
     <remap from="input" to="/pipeline/04_smoothed" />
+
+    <param name="profile" type="string" value="$(arg compression_profile)" />
+
     <remap from="output" to="/pipeline/05_compressed" />
   </node>
 
@@ -62,9 +66,34 @@
   </node>
 
   <!-- Meshing -->
+  <arg name="meshing_method" default="greedy" />
+  <arg name="meshing_greedy_search_radius" default="2.5" />
+  <arg name="meshing_greedy_mu" default="2.5" />
+  <arg name="meshing_greedy_max_nearerst_neighbours" default="100" />
+  <arg name="meshing_greedy_max_surface_angle" default="45" />
+  <arg name="meshing_greedy_min_surface_angle" default="10" />
+  <arg name="meshing_greedy_max_angle" default="120" />
+  <arg name="meshing_poisson_depth" default="9" />
   <node pkg="pcl_pipeline_utils" type="pcl_meshing" name="pipeline_meshing" output="screen" >
     <remap from="input" to="/pipeline/06_decompressed" />
+
+    <param name="method" type="string" value="$(arg meshing_method)" />
+    <param name="greedy_search_radius" type="double" value="$(arg meshing_greedy_search_radius)" />
+    <param name="greedy_search_radius" type="double" value="$(arg meshing_greedy_mu)" />
+    <param name="greedy_search_radius" type="int" value="$(arg meshing_greedy_max_nearerst_neighbours)" />
+    <param name="greedy_search_radius" type="double" value="$(arg meshing_greedy_max_surface_angle)" />
+    <param name="greedy_search_radius" type="double" value="$(arg meshing_greedy_min_surface_angle)" />
+    <param name="greedy_search_radius" type="double" value="$(arg meshing_greedy_max_angle)" />
+    <param name="poisson_depth" type="int" value="$(arg meshing_poisson_depth)" />
+
     <remap from="output" to="/pipeline/07_meshed" />
   </node>
+
+  <!-- UnMeshing -->
+  <node pkg="pcl_pipeline_utils" type="pcl_unmeshing" name="pipeline_unmeshing" output="screen" >
+    <remap from="input" to="/pipeline/07_meshed" />
+    <remap from="output" to="/pipeline/08_unmeshed" />
+  </node>
+  
 
 </launch>

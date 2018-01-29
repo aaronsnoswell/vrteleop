@@ -30,6 +30,9 @@
 #include "pcl_pipeline_utils/PolygonMesh.h"
 #include "pcl_pipeline_utils/Polygon.h"
 
+#define RAD_TO_DEG  57.29578
+#define DEG_TO_RAD  (1.0/RAD_TO_DEG)
+
 
 /**
  * Simple class to allow meshing of a point cloud
@@ -38,6 +41,9 @@ class Meshing
 {
 public:
 
+    /**
+     * Simple Enum to store mesh method
+     */
     enum EMeshMethod
     {
         GreedyProjection,
@@ -47,9 +53,47 @@ public:
         ConvexHull
     };
 
-    Meshing(EMeshMethod method=GreedyProjection)
+
+    /**
+     * Simple struct to store meshing config
+     */
+    typedef struct MeshingConfiguration
+    {
+        EMeshMethod method;
+
+        double greedy_search_radius;
+        double greedy_mu;
+        int greedy_max_nearerst_neighbours;
+        double greedy_max_surface_angle;
+        double greedy_min_surface_angle;
+        double greedy_max_angle;
+        
+        int poisson_depth;
+
+        // Constructor
+        MeshingConfiguration()
+        {
+            method = GreedyProjection;
+
+            greedy_search_radius = 2.5;
+            greedy_mu = 2.5;
+            greedy_max_nearerst_neighbours = 100;
+            greedy_max_surface_angle = 45;
+            greedy_min_surface_angle = 10;
+            greedy_max_angle = 120;
+
+            poisson_depth = 9;
+        }
+
+    } MeshingConfiguration_t;
+
+
+    /**
+     * Constructor
+     */
+    Meshing(MeshingConfiguration_t config)
         :
-        _method(method),
+        _config(config),
         _pclCloud(new pcl::PointCloud<pcl::PointXYZ>),
         _outputMsgPointCloud2(new sensor_msgs::PointCloud2),
         _outputMsg(new pcl_pipeline_utils::PolygonMesh)
@@ -62,61 +106,14 @@ public:
     ros::Publisher pub;
     void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg);
 
+    static MeshingConfiguration_t getConfiguration(ros::NodeHandle nh);
+
 private:
-    EMeshMethod _method;
+    MeshingConfiguration _config;
     pcl::PointCloud<pcl::PointXYZ>::Ptr _pclCloud;
     sensor_msgs::PointCloud2::Ptr _outputMsgPointCloud2;
     pcl_pipeline_utils::PolygonMesh::Ptr _outputMsg;
 };
-
-
-/**
- * Copied from http://docs.pointclouds.org/1.0.1/io_8hpp_source.html#l00187
- */
-template <typename PointIn1T, typename PointIn2T, typename PointOutT> void
-foozleConcatenateFields (const pcl::PointCloud<PointIn1T> &cloud1_in,
-                        const pcl::PointCloud<PointIn2T> &cloud2_in,
-                        pcl::PointCloud<PointOutT> &cloud_out)
-{
-    typedef typename pcl::traits::fieldList<PointIn1T>::type FieldList1;
-    typedef typename pcl::traits::fieldList<PointIn2T>::type FieldList2;
-
-    ROS_WARN("Starting concat");
-
-    if (cloud1_in.points.size () != cloud2_in.points.size ())
-    {
-        PCL_ERROR ("[pcl::concatenateFields] The number of points in the two input datasets differs!\n");
-        return;
-    }
-
-    ROS_WARN("Same # of points");
-
-    // Resize the output dataset
-    cloud_out.points.resize(cloud1_in.points.size());
-
-    ROS_WARN("Resized");
-
-    cloud_out.header   = cloud1_in.header;
-    cloud_out.width    = cloud1_in.width;
-    cloud_out.height   = cloud1_in.height;
-
-    if (!cloud1_in.is_dense || !cloud2_in.is_dense)
-        cloud_out.is_dense = false;
-    else
-        cloud_out.is_dense = true;
-
-    ROS_WARN("Copied metadata");
-
-    // Iterate over each point
-    for (size_t i = 0; i < cloud_out.points.size (); ++i)
-    {
-        // Iterate over each dimension
-        pcl::for_each_type <FieldList1> (pcl::NdConcatenateFunctor <PointIn1T, PointOutT> (cloud1_in.points[i], cloud_out.points[i]));
-        pcl::for_each_type <FieldList2> (pcl::NdConcatenateFunctor <PointIn2T, PointOutT> (cloud2_in.points[i], cloud_out.points[i]));
-    }
-
-    ROS_WARN("Copied points");
-}
 
 
 /**
@@ -152,7 +149,7 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         pcl::PolygonMesh mesh;
 
         // Switch on triangulation method
-        switch(_method)
+        switch(_config.method)
         {
             case GreedyProjection:
             {
@@ -164,15 +161,15 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 pcl::search::KdTree<pcl::PointNormal>::Ptr meshTree(new pcl::search::KdTree<pcl::PointNormal>);
                 meshTree->setInputCloud(cloud_with_normals);
 
-                // Set the maximum distance between connected points (maximum edge length)
-                gp3.setSearchRadius(0.025);
+                // Set configurable parameters
+                gp3.setSearchRadius(_config.greedy_search_radius);
+                gp3.setMu(_config.greedy_mu);
+                gp3.setMaximumNearestNeighbors(_config.greedy_max_nearerst_neighbours);
+                gp3.setMaximumSurfaceAngle(_config.greedy_max_surface_angle * DEG_TO_RAD);
+                gp3.setMinimumAngle(_config.greedy_min_surface_angle * DEG_TO_RAD);
+                gp3.setMaximumAngle(_config.greedy_max_angle * DEG_TO_RAD);
 
-                // Set typical values for the parameters
-                gp3.setMu(2.5);
-                gp3.setMaximumNearestNeighbors(100);
-                gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees
-                gp3.setMinimumAngle(M_PI/18); // 10 degrees
-                gp3.setMaximumAngle(2*M_PI/3); // 120 degrees
+                // Set hard-coded parameters
                 gp3.setNormalConsistency(true);
                 gp3.setConsistentVertexOrdering(true);
 
@@ -194,7 +191,9 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 );
 
                 //Poisson<pcl::PointNormal> poisson;
-                //poisson.setDepth (9);
+
+                // Set configurable parameters
+                //poisson.setDepth(_config.poisson_depth);
                 //poisson.setInputCloud (cloud_with_normals);
                 //poisson.reconstruct(mesh);
 
@@ -233,7 +232,6 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // (For debugging only)
         pcl::io::saveVTKFile("/home/aaron/Development/mesh.vtk", mesh);
         //pcl::io::savePolygonFileSTL("/home/aaron/Development/testing-output.stl", mesh);
-        ros::shutdown();
 
         // Convert to PolygonMesh message format
         pcl::PCLPointCloud2 pcl_pc2_out;
@@ -278,6 +276,33 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 }
 
 
+Meshing::MeshingConfiguration_t Meshing::getConfiguration(ros::NodeHandle nh)
+{
+    MeshingConfiguration_t c;
+
+    std::string method;
+    if(nh.getParam("method", method))
+    {
+        if(method == "GreedyProjection") c.method = GreedyProjection;
+        else if(method == "Poisson") c.method = Poisson;
+        else if(method == "MarchingCubesRBF") c.method = MarchingCubesRBF;
+        else if(method == "MarchingCubesHoppe") c.method = MarchingCubesHoppe;
+        else if(method == "ConvexHull") c.method = ConvexHull;
+    }
+
+    nh.getParam("greedy_search_radius", c.greedy_search_radius);
+    nh.getParam("greedy_mu", c.greedy_mu);
+    nh.getParam("greedy_max_nearerst_neighbours", c.greedy_max_nearerst_neighbours);
+    nh.getParam("greedy_max_surface_angle", c.greedy_max_surface_angle);
+    nh.getParam("greedy_min_surface_angle", c.greedy_min_surface_angle);
+    nh.getParam("greedy_max_angle", c.greedy_max_angle);
+
+    nh.getParam("poisson_depth", c.poisson_depth);
+
+    return c;
+}
+
+
 /**
  * Main
  */
@@ -288,7 +313,7 @@ int main (int argc, char** argv)
     ros::NodeHandle nh, pnh("~");
 
     // Create our filter
-    Meshing MyObj;
+    Meshing MyObj(Meshing::getConfiguration(nh));
     const boost::function< void(const sensor_msgs::PointCloud2ConstPtr &)> boundCloudCallback = \
         boost::bind(&Meshing::cloudCallback, &MyObj, _1);
 
