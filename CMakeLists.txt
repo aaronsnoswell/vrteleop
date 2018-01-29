@@ -73,3 +73,11 @@ add_executable(pcl_meshing
 target_link_libraries(pcl_meshing
   ${catkin_LIBRARIES}
 )
+
+## Grab UnMeshing
+add_executable(pcl_unmeshing
+  src/pcl_unmeshing.cpp
+)
+target_link_libraries(pcl_unmeshing
+  ${catkin_LIBRARIES}
+)

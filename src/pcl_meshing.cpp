@@ -50,7 +50,7 @@ public:
     Meshing(EMeshMethod method=GreedyProjection)
         :
         _method(method),
-        _pclCloud(new pcl::PointCloud<pcl_utils::PointT>),
+        _pclCloud(new pcl::PointCloud<pcl::PointXYZ>),
         _outputMsgPointCloud2(new sensor_msgs::PointCloud2),
         _outputMsg(new pcl_pipeline_utils::PolygonMesh)
     {
@@ -64,14 +64,63 @@ public:
 
 private:
     EMeshMethod _method;
-    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr _pclCloud;
     sensor_msgs::PointCloud2::Ptr _outputMsgPointCloud2;
     pcl_pipeline_utils::PolygonMesh::Ptr _outputMsg;
 };
 
 
 /**
- * Callback that performs the Point Cloud compression
+ * Copied from http://docs.pointclouds.org/1.0.1/io_8hpp_source.html#l00187
+ */
+template <typename PointIn1T, typename PointIn2T, typename PointOutT> void
+foozleConcatenateFields (const pcl::PointCloud<PointIn1T> &cloud1_in,
+                        const pcl::PointCloud<PointIn2T> &cloud2_in,
+                        pcl::PointCloud<PointOutT> &cloud_out)
+{
+    typedef typename pcl::traits::fieldList<PointIn1T>::type FieldList1;
+    typedef typename pcl::traits::fieldList<PointIn2T>::type FieldList2;
+
+    ROS_WARN("Starting concat");
+
+    if (cloud1_in.points.size () != cloud2_in.points.size ())
+    {
+        PCL_ERROR ("[pcl::concatenateFields] The number of points in the two input datasets differs!\n");
+        return;
+    }
+
+    ROS_WARN("Same # of points");
+
+    // Resize the output dataset
+    cloud_out.points.resize(cloud1_in.points.size());
+
+    ROS_WARN("Resized");
+
+    cloud_out.header   = cloud1_in.header;
+    cloud_out.width    = cloud1_in.width;
+    cloud_out.height   = cloud1_in.height;
+
+    if (!cloud1_in.is_dense || !cloud2_in.is_dense)
+        cloud_out.is_dense = false;
+    else
+        cloud_out.is_dense = true;
+
+    ROS_WARN("Copied metadata");
+
+    // Iterate over each point
+    for (size_t i = 0; i < cloud_out.points.size (); ++i)
+    {
+        // Iterate over each dimension
+        pcl::for_each_type <FieldList1> (pcl::NdConcatenateFunctor <PointIn1T, PointOutT> (cloud1_in.points[i], cloud_out.points[i]));
+        pcl::for_each_type <FieldList2> (pcl::NdConcatenateFunctor <PointIn2T, PointOutT> (cloud2_in.points[i], cloud_out.points[i]));
+    }
+
+    ROS_WARN("Copied points");
+}
+
+
+/**
+ * Callback that performs the Point Cloud meshing
  */
 void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
@@ -84,37 +133,43 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
         // Estimate normals
         // NB: We have previously done this, but the compression step discards this info
-        pcl::NormalEstimation<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> n;
-        pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr normalCloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-        pcl::search::KdTree<pcl::PointXYZRGB>::Ptr normalEstimationTree(new pcl::search::KdTree<pcl::PointXYZRGB>);
+        pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> n;
+        pcl::PointCloud<pcl::PointNormal>::Ptr normalCloud(new pcl::PointCloud<pcl::PointNormal>);
+        pcl::search::KdTree<pcl::PointXYZ>::Ptr normalEstimationTree(new pcl::search::KdTree<pcl::PointXYZ>);
         normalEstimationTree->setInputCloud(_pclCloud);
         n.setInputCloud(_pclCloud);
         n.setSearchMethod(normalEstimationTree);
         n.setKSearch(20);
         n.compute(*normalCloud);
-        n.setViewPoint(0, 0, 0);
+
+        // Concatenate the XYZ and normal fields
+        // NB: The order you pass the parameters to pcl::concatenateFields matters!
+        // If you pass normalCloud second, it's x, y, z fields (that are 0) are copied over to the output!
+        pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointNormal>());
+        pcl::concatenateFields(*normalCloud, *_pclCloud, *cloud_with_normals);
 
         // Initialize mesh
-        pcl::PolygonMesh triangles;
+        pcl::PolygonMesh mesh;
 
+        // Switch on triangulation method
         switch(_method)
         {
             case GreedyProjection:
             {
 
                 // Use Greedy Projection Triangulation
-                pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
+                pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
 
                 // Create search tree
-                pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr meshTree(new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
-                meshTree->setInputCloud(normalCloud);
+                pcl::search::KdTree<pcl::PointNormal>::Ptr meshTree(new pcl::search::KdTree<pcl::PointNormal>);
+                meshTree->setInputCloud(cloud_with_normals);
 
                 // Set the maximum distance between connected points (maximum edge length)
-                gp3.setSearchRadius (25);
+                gp3.setSearchRadius(0.025);
 
                 // Set typical values for the parameters
-                gp3.setMu (2.5);
-                gp3.setMaximumNearestNeighbors (100);
+                gp3.setMu(2.5);
+                gp3.setMaximumNearestNeighbors(100);
                 gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees
                 gp3.setMinimumAngle(M_PI/18); // 10 degrees
                 gp3.setMaximumAngle(2*M_PI/3); // 120 degrees
@@ -122,52 +177,13 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 gp3.setConsistentVertexOrdering(true);
 
                 // Get result
-                gp3.setInputCloud(normalCloud);
+                gp3.setInputCloud(cloud_with_normals);
                 gp3.setSearchMethod(meshTree);
-                gp3.reconstruct(triangles);
+                gp3.reconstruct(mesh);
 
                 // Additional vertex information
                 std::vector<int> parts = gp3.getPartIDs();
                 std::vector<int> states = gp3.getPointStates();
-
-                // Convert to PolygonMesh message format
-                pcl::PCLPointCloud2 pcl_pc2;
-                pcl::toPCLPointCloud2(*normalCloud, pcl_pc2);
-                pcl_conversions::fromPCL(pcl_pc2, *_outputMsgPointCloud2);
-
-                // Copy header
-                _outputMsg->header = msg->header;
-
-                // Copy over cloud
-                _outputMsg->cloud.height = _outputMsgPointCloud2->height;
-                _outputMsg->cloud.width = _outputMsgPointCloud2->width;
-                _outputMsg->cloud.fields = _outputMsgPointCloud2->fields;
-                _outputMsg->cloud.is_bigendian = _outputMsgPointCloud2->is_bigendian;
-                _outputMsg->cloud.point_step = _outputMsgPointCloud2->point_step;
-                _outputMsg->cloud.row_step = _outputMsgPointCloud2->row_step;
-                _outputMsg->cloud.data = _outputMsgPointCloud2->data;
-                _outputMsg->cloud.is_dense = _outputMsgPointCloud2->is_dense;
-
-                // Copy over the triangles array
-                pcl_pipeline_utils::Polygon poly;
-                for(int i=0; i<triangles.polygons.size(); i++)
-                {
-                    poly.vertices.clear();
-                    for(int j=0; j<triangles.polygons[i].vertices.size(); j++)
-                    {
-                        poly.vertices.push_back(triangles.polygons[i].vertices[j]);
-                    }
-                    _outputMsg->polygons.push_back(poly);
-                }
-                
-                // Save output file
-                // (Debug only)
-                //pcl::io::saveVTKFile("/home/aaron/Development/testing-output.vtk", triangles);
-                //pcl::io::savePolygonFileSTL("/home/aaron/Development/testing-output.stl", triangles);
-                //ros::shutdown();
-
-                // Pubish the mesh
-                pub.publish(_outputMsg);
 
                 break;
             }
@@ -176,6 +192,12 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 ROS_WARN(
                     "Poisson meshing method not implemented yet"
                 );
+
+                //Poisson<pcl::PointNormal> poisson;
+                //poisson.setDepth (9);
+                //poisson.setInputCloud (cloud_with_normals);
+                //poisson.reconstruct(mesh);
+
                 break;
             }
             case MarchingCubesRBF:
@@ -206,6 +228,46 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 );
             }
         }
+        
+        // Save output file
+        // (For debugging only)
+        pcl::io::saveVTKFile("/home/aaron/Development/mesh.vtk", mesh);
+        //pcl::io::savePolygonFileSTL("/home/aaron/Development/testing-output.stl", mesh);
+        ros::shutdown();
+
+        // Convert to PolygonMesh message format
+        pcl::PCLPointCloud2 pcl_pc2_out;
+        pcl::toPCLPointCloud2(*cloud_with_normals, pcl_pc2_out);
+        pcl_conversions::fromPCL(pcl_pc2_out, *_outputMsgPointCloud2);
+
+        // Copy header
+        _outputMsg->header = msg->header;
+
+        // Copy over cloud
+        _outputMsg->cloud.height = _outputMsgPointCloud2->height;
+        _outputMsg->cloud.width = _outputMsgPointCloud2->width;
+        _outputMsg->cloud.fields = _outputMsgPointCloud2->fields;
+        _outputMsg->cloud.is_bigendian = _outputMsgPointCloud2->is_bigendian;
+        _outputMsg->cloud.point_step = _outputMsgPointCloud2->point_step;
+        _outputMsg->cloud.row_step = _outputMsgPointCloud2->row_step;
+        _outputMsg->cloud.data = _outputMsgPointCloud2->data;
+        _outputMsg->cloud.is_dense = _outputMsgPointCloud2->is_dense;
+
+        // Copy over the mesh array
+        pcl_pipeline_utils::Polygon poly;
+        for(int i=0; i<mesh.polygons.size(); i++)
+        {
+            poly.vertices.clear();
+            for(int j=0; j<mesh.polygons[i].vertices.size(); j++)
+            {
+                poly.vertices.push_back(mesh.polygons[i].vertices[j]);
+            }
+            _outputMsg->polygons.push_back(poly);
+        }
+
+        // Pubish the mesh
+        pub.publish(_outputMsg);
+
     }
     else
     {
