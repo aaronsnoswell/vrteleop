@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 #include "pcl_utils.h"
-#include "pcl_pipeline_utils/CompressedPointCloud2.h"
+#include "vrteleop/CompressedPointCloud2.h"
 
 /**
  * Simple class to allow compression of a point cloud
@@ -32,7 +32,7 @@ private:
     
     pcl::io::OctreePointCloudCompression<pcl_utils::PointT>* _PointCloudEncoder;
     pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
-    pcl_pipeline_utils::CompressedPointCloud2 _outputMsg;
+    vrteleop::CompressedPointCloud2 _outputMsg;
 
 public:
     Compression(pcl::io::OctreePointCloudCompression<pcl_utils::PointT>* PointCloudEncoder)
@@ -186,7 +186,7 @@ int main (int argc, char** argv)
     MyObj.sub = nh.subscribe<sensor_msgs::PointCloud2>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
-    MyObj.pub = nh.advertise<pcl_pipeline_utils::CompressedPointCloud2>("/output", 10);
+    MyObj.pub = nh.advertise<vrteleop::CompressedPointCloud2>("/output", 10);
 
     // Spin
     ros::spin ();

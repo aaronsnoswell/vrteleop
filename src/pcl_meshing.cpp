@@ -22,14 +22,16 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
 
+#include <pcl/filters/filter.h>
+
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "pcl_utils.h"
-#include "pcl_pipeline_utils/PolygonMesh.h"
-#include "pcl_pipeline_utils/Polygon.h"
+#include "vrteleop/PolygonMesh.h"
+#include "vrteleop/Polygon.h"
 
 #define RAD_TO_DEG  57.29578
 #define DEG_TO_RAD  (1.0/RAD_TO_DEG)
@@ -96,8 +98,9 @@ public:
         :
         _config(config),
         _pclCloud(new pcl::PointCloud<pcl_utils::PointT>),
+        _pclCloudNaNsCleared(new pcl::PointCloud<pcl_utils::PointT>),
         _outputMsgPointCloud2(new sensor_msgs::PointCloud2),
-        _outputMsg(new pcl_pipeline_utils::PolygonMesh)
+        _outputMsg(new vrteleop::PolygonMesh)
     {
         switch(_config.method)
         {
@@ -134,8 +137,9 @@ public:
 private:
     MeshingConfiguration _config;
     pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
+    pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloudNaNsCleared;
     sensor_msgs::PointCloud2::Ptr _outputMsgPointCloud2;
-    pcl_pipeline_utils::PolygonMesh::Ptr _outputMsg;
+    vrteleop::PolygonMesh::Ptr _outputMsg;
 };
 
 
@@ -151,13 +155,21 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         pcl_conversions::toPCL(*msg, pcl_pc2);
         pcl::fromPCLPointCloud2(pcl_pc2, *_pclCloud);
 
+        // Clear NaNs from the input
+        std::vector<int> nanIndices;
+        pcl::removeNaNFromPointCloud(*_pclCloud, *_pclCloudNaNsCleared, nanIndices);
+
+        // TODO check for INF in input?
+        // https://github.com/PointCloudLibrary/pcl/blob/master/examples/common/example_check_if_point_is_valid.cpp
+        // Better yet, figure out why MLS is giving us INF
+
         // Estimate normals
         // NB: We have previously done this, but the compression step discards this info
         pcl::NormalEstimation<pcl_utils::PointT, pcl::PointNormal> n;
         pcl::PointCloud<pcl::PointNormal>::Ptr normalCloud(new pcl::PointCloud<pcl::PointNormal>);
         pcl::search::KdTree<pcl_utils::PointT>::Ptr normalEstimationTree(new pcl::search::KdTree<pcl_utils::PointT>);
-        normalEstimationTree->setInputCloud(_pclCloud);
-        n.setInputCloud(_pclCloud);
+        normalEstimationTree->setInputCloud(_pclCloudNaNsCleared);
+        n.setInputCloud(_pclCloudNaNsCleared);
         n.setSearchMethod(normalEstimationTree);
         n.setKSearch(20);
         n.compute(*normalCloud);
@@ -166,7 +178,7 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // NB: The order you pass the parameters to pcl::concatenateFields matters!
         // If you pass normalCloud second, it's x, y, z fields (that are 0) are copied over to the output!
         pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr combined_cloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>());
-        pcl::concatenateFields(*normalCloud, *_pclCloud, *combined_cloud);
+        pcl::concatenateFields(*normalCloud, *_pclCloudNaNsCleared, *combined_cloud);
 
         // Initialize mesh
         pcl::PolygonMesh mesh;
@@ -273,7 +285,7 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         _outputMsg->cloud.is_dense = _outputMsgPointCloud2->is_dense;
 
         // Copy over the mesh array
-        pcl_pipeline_utils::Polygon poly;
+        vrteleop::Polygon poly;
         for(int i=0; i<mesh.polygons.size(); i++)
         {
             poly.vertices.clear();
@@ -297,6 +309,8 @@ void Meshing::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 }
 
 
+// TODO: Figure out better parameters for GP3
+// https://github.com/PointCloudLibrary/pcl/blob/master/tools/gp3_surface.cpp
 Meshing::MeshingConfiguration_t Meshing::getConfiguration(ros::NodeHandle nh)
 {
     MeshingConfiguration_t c;
@@ -342,7 +356,7 @@ int main (int argc, char** argv)
     MyObj.sub = nh.subscribe<sensor_msgs::PointCloud2>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
-    MyObj.pub = nh.advertise<pcl_pipeline_utils::PolygonMesh>("/output", 10);
+    MyObj.pub = nh.advertise<vrteleop::PolygonMesh>("/output", 10);
 
     // Spin
     ros::spin ();

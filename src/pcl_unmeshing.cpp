@@ -27,8 +27,8 @@
 #include <stdlib.h>
 
 #include "pcl_utils.h"
-#include "pcl_pipeline_utils/PolygonMesh.h"
-#include "pcl_pipeline_utils/Polygon.h"
+#include "vrteleop/PolygonMesh.h"
+#include "vrteleop/Polygon.h"
 
 
 /**
@@ -49,7 +49,7 @@ public:
 
     ros::Subscriber sub;
     ros::Publisher pub;
-    void cloudCallback(const pcl_pipeline_utils::PolygonMeshPtr& msg);
+    void cloudCallback(const vrteleop::PolygonMeshPtr& msg);
 
 private:
     pcl::PointCloud<pcl_utils::PointT>::Ptr _pclCloud;
@@ -60,7 +60,7 @@ private:
 /**
  * Callback that performs the Point Cloud un-meshing
  */
-void UnMeshing::cloudCallback(const pcl_pipeline_utils::PolygonMeshPtr& msg)
+void UnMeshing::cloudCallback(const vrteleop::PolygonMeshPtr& msg)
 {
     if(pub.getNumSubscribers())
     {
@@ -110,11 +110,11 @@ int main (int argc, char** argv)
 
     // Create our filter
     UnMeshing MyObj;
-    const boost::function< void(const pcl_pipeline_utils::PolygonMeshPtr &)> boundCloudCallback = \
+    const boost::function< void(const vrteleop::PolygonMeshPtr &)> boundCloudCallback = \
         boost::bind(&UnMeshing::cloudCallback, &MyObj, _1);
 
     // Create a ROS subscriber for the input
-    MyObj.sub = nh.subscribe<pcl_pipeline_utils::PolygonMesh>("/input", 10, boundCloudCallback);
+    MyObj.sub = nh.subscribe<vrteleop::PolygonMesh>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
     MyObj.pub = nh.advertise<sensor_msgs::PointCloud2>("/output", 10);

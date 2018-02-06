@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(pcl_pipeline_utils)
+project(vrteleop)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -43,41 +43,25 @@ include_directories(
 )
 
 ## Grab MLS
-add_executable(pcl_smoothing
-  src/pcl_moving_least_squares.cpp
-)
-target_link_libraries(pcl_smoothing
-  ${catkin_LIBRARIES}
-)
+add_executable(pcl_smoothing src/pcl_moving_least_squares.cpp)
+target_link_libraries(pcl_smoothing ${catkin_LIBRARIES})
 
 ## Grab Compression
-add_executable(pcl_compression
-  src/pcl_compression.cpp
-)
-target_link_libraries(pcl_compression
-  ${catkin_LIBRARIES}
-)
+add_executable(pcl_compression src/pcl_compression.cpp)
+add_dependencies(pcl_compression vrteleop_generate_messages_cpp)
+target_link_libraries(pcl_compression ${catkin_LIBRARIES})
 
 ## Grab Decompression
-add_executable(pcl_decompression
-  src/pcl_decompression.cpp
-)
-target_link_libraries(pcl_decompression
-  ${catkin_LIBRARIES}
-)
+add_executable(pcl_decompression src/pcl_decompression.cpp)
+add_dependencies(pcl_decompression vrteleop_generate_messages_cpp)
+target_link_libraries(pcl_decompression ${catkin_LIBRARIES})
 
 ## Grab Meshing
-add_executable(pcl_meshing
-  src/pcl_meshing.cpp
-)
-target_link_libraries(pcl_meshing
-  ${catkin_LIBRARIES}
-)
+add_executable(pcl_meshing src/pcl_meshing.cpp)
+add_dependencies(pcl_meshing vrteleop_generate_messages_cpp)
+target_link_libraries(pcl_meshing ${catkin_LIBRARIES})
 
 ## Grab UnMeshing
-add_executable(pcl_unmeshing
-  src/pcl_unmeshing.cpp
-)
-target_link_libraries(pcl_unmeshing
-  ${catkin_LIBRARIES}
-)
+add_executable(pcl_unmeshing src/pcl_unmeshing.cpp)
+add_dependencies(pcl_unmeshing vrteleop_generate_messages_cpp)
+target_link_libraries(pcl_unmeshing ${catkin_LIBRARIES})

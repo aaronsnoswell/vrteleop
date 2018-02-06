@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 #include "pcl_utils.h"
-#include "pcl_pipeline_utils/CompressedPointCloud2.h"
+#include "vrteleop/CompressedPointCloud2.h"
 
 
 /**
@@ -48,14 +48,14 @@ public:
 
     ros::Subscriber sub;
     ros::Publisher pub;
-    void cloudCallback(const pcl_pipeline_utils::CompressedPointCloud2::ConstPtr& cloud_msg);
+    void cloudCallback(const vrteleop::CompressedPointCloud2::ConstPtr& cloud_msg);
 };
 
 
 /**
  * Callback that performs the Point Cloud decompression
  */
-void Decompression::cloudCallback(const pcl_pipeline_utils::CompressedPointCloud2::ConstPtr& msg)
+void Decompression::cloudCallback(const vrteleop::CompressedPointCloud2::ConstPtr& msg)
 {
     // Stringstream to retrieve compressed point cloud
     std::stringstream compressed_data(msg->data);
@@ -96,11 +96,11 @@ int main (int argc, char** argv)
 
     // Create our filter
     Decompression MyObj;
-    const boost::function< void(const pcl_pipeline_utils::CompressedPointCloud2::ConstPtr &)> boundCloudCallback = \
+    const boost::function< void(const vrteleop::CompressedPointCloud2::ConstPtr &)> boundCloudCallback = \
         boost::bind(&Decompression::cloudCallback, &MyObj, _1);
 
     // Create a ROS subscriber for the input
-    MyObj.sub = nh.subscribe<pcl_pipeline_utils::CompressedPointCloud2>("/input", 10, boundCloudCallback);
+    MyObj.sub = nh.subscribe<vrteleop::CompressedPointCloud2>("/input", 10, boundCloudCallback);
 
     // Create a ROS publisher for the output
     MyObj.pub = nh.advertise<sensor_msgs::PointCloud2>("/output", 10);

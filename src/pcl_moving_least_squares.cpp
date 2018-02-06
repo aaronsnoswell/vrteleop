@@ -46,7 +46,7 @@ void MovingLeastSquares::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& m
     pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
     
     // Set parameters
-    mls.setComputeNormals (true);
+    mls.setComputeNormals(true);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud = pcl_utils::fromROSMsgRGB(msg);
     mls.setInputCloud(cloud);
     mls.setPolynomialFit(true);
