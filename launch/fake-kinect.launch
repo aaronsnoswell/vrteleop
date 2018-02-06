@@ -51,8 +51,8 @@
   <!-- Launch RosBridge -->
   <arg name="port" default="9090" />
   <arg name="host" default="" />
-  <arg name="bson_only_mode" default="true" />
-  <arg name="use_websocket" default="false" />
+  <arg name="bson_only_mode" default="false" />
+  <arg name="use_websocket" default="true" />
   <include file="$(find pcl_pipeline_utils)/launch/rosbridge.launch" >
     <arg name="port" value="$(arg port)" />
     <arg name="host" value="$(arg host)" />
