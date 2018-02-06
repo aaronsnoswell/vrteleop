@@ -66,6 +66,7 @@
   </node>
 
   <!-- Meshing -->
+  <!--
   <arg name="meshing_method" default="GreedyProjection" />
   <arg name="meshing_greedy_search_radius" default="2.5" />
   <arg name="meshing_greedy_mu" default="2.5" />
@@ -75,6 +76,8 @@
   <arg name="meshing_greedy_max_angle" default="120" />
   <arg name="meshing_poisson_depth" default="9" />
   <node pkg="pcl_pipeline_utils" type="pcl_meshing" name="pipeline_meshing" output="screen" >
+    <!- Smoother seems to output INF points at the moment -
+    <!- <remap from="input" to="/pipeline/06_smoothed" /> -
     <remap from="input" to="/pipeline/05_decompressed" />
 
     <param name="method" type="string" value="$(arg meshing_method)" />
@@ -88,12 +91,15 @@
 
     <remap from="output" to="/pipeline/07_meshed" />
   </node>
+  -->
 
   <!-- UnMeshing -->
+  <!--
   <node pkg="pcl_pipeline_utils" type="pcl_unmeshing" name="pipeline_unmeshing" output="screen" >
     <remap from="input" to="/pipeline/07_meshed" />
     <remap from="output" to="/pipeline/08_unmeshed" />
   </node>
+  -->
   
 
 </launch>
