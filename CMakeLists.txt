@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   sensor_msgs
+  geometry_msgs
   pcl_conversions
   pcl_ros
   message_generation
@@ -21,12 +22,14 @@ add_message_files(
   HeaderlessPointCloud2.msg
   PolygonMesh.msg
   Polygon.msg
+  VRMotionController.msg
 )
 
 generate_messages(
   DEPENDENCIES
   std_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 catkin_package(
@@ -34,6 +37,7 @@ catkin_package(
   message_runtime
   std_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 ## Grab any includes
