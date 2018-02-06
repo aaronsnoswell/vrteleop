@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- Launch file to for visualisation and diagnostics -->
+
+  <!-- Launch rviz -->
+  <include file="$(find rdl_jaco_kinect2)/launch/rviz.launch" />
+  
+  <!-- Launch rqt_graph -->
+  <node pkg="rqt_graph" type="rqt_graph" name="rqt_graph" output="screen" />
+
+</launch>
+

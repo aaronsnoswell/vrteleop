@@ -1,22 +1,20 @@
 <launch>
 
+  <!-- Launch file that creates a Kinect stub by playing a bagfile -->
+
   <param name="use_sim_time" value="true" />
 
   <!-- Arg to indicate if we're running on a non-gpu PC -->
-  <arg name="no_gpu" default="false" />
+  <arg name="crop_cloud" default="false" />
 
   <!-- Bagfile to play -->
-  <arg name="bagfile" default="$(find pcl_pipeline_utils)/bags/test_01.bag" />
+  <arg name="bagfile" default="$(find vrteleop)/bags/test_01.bag" />
 
   <!-- Play a rosbag recording of the relevant topics -->
   <node pkg="rosbag" type="play" name="player_nogpu" output="screen"
     args="--clock --loop --quiet --rate=0.5 $(arg bagfile)" />
 
-  <!-- Alias the point cloud -->
-  <node name="alias" pkg="pcl_pipeline_utils" type="forwarder.py" unless="$(arg no_gpu)"
-    args="/jaco_kinect2/sd/points /pcl_stream" />
-
-  <group if="$(arg no_gpu)">
+  <group if="$(arg crop_cloud)">
 
     <!-- VoxelGrid filters for viewing on my crappy laptop with no GPU -->
     <node pkg="nodelet" type="nodelet" name="debug_decimation"
@@ -40,24 +38,17 @@
       <param name="filter_limit_max" type="double" value="0.2" />
       <param name="filter_limit_negative" type="bool" value="false" />
 
-      <remap from="~output" to="/pcl_stream" />
+      <remap from="~output" to="/vrt/fromrobot/pcl/kinect_stream" />
     </node>
 
   </group>
 
-  <!-- Launch rviz -->
-  <include file="$(find rdl_jaco_kinect2)/launch/rviz.launch" />
-  
-  <!-- Launch RosBridge -->
-  <arg name="port" default="9090" />
-  <arg name="host" default="" />
-  <arg name="bson_only_mode" default="false" />
-  <arg name="use_websocket" default="true" />
-  <include file="$(find pcl_pipeline_utils)/launch/rosbridge.launch" >
-    <arg name="port" value="$(arg port)" />
-    <arg name="host" value="$(arg host)" />
-    <arg name="bson_only_mode" value="$(arg bson_only_mode)" />
-    <arg name="use_websocket" value="$(arg use_websocket)" />
-  </include>
+  <group unless="$(arg crop_cloud)">
+
+    <!-- Alias the point cloud -->
+    <node name="alias" pkg="vrteleop" type="forwarder.py" unless="$(arg crop_cloud)"
+      args="/jaco_kinect2/sd/points /vrt/fromrobot/pcl/kinect_stream" />
+
+  </group>
 
 </launch>
