@@ -44,7 +44,7 @@
   <node pkg="pcl_pipeline_utils" type="pcl_compression" name="pipeline_compression" output="screen" >
     <remap from="input" to="/pipeline/03_outliers_removed" />
 
-    <!--<param name="profile" type="string" value="$(arg compression_profile)" />-->
+    <param name="profile" type="string" value="$(arg compression_profile)" />
 
     <remap from="output" to="/pipeline/04_compressed" />
   </node>
