@@ -2,8 +2,8 @@
 
   <arg name="port" default="9090" />
   <arg name="host" default="" />
-  <arg name="bson_only_mode" default="true" />
-  <arg name="use_websocket" default="false" />
+  <arg name="bson_only_mode" default="false" />
+  <arg name="use_websocket" default="true" />
 
   <!-- Launch rosbridge in tcp mode -->
   <group unless="$(arg use_websocket)">
