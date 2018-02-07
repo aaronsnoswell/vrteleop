@@ -47,7 +47,7 @@
   <group unless="$(arg crop_cloud)">
 
     <!-- Alias the point cloud -->
-    <node name="alias" pkg="vrteleop" type="forwarder.py" unless="$(arg crop_cloud)"
+    <node name="alias_bagoutput" pkg="vrteleop" type="forwarder.py" unless="$(arg crop_cloud)"
       args="/jaco_kinect2/sd/points /vrt/fromrobot/pcl/kinect_stream" />
 
   </group>
