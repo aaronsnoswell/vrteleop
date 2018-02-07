@@ -1,0 +1,50 @@
+<launch>
+
+  <!-- Launch file for preprocessing of pointcloud data -->
+  <!-- (i.e. run on MOVO2 onboard PC or Delight) -->
+
+  <arg name="input" default="/vrt/fromrobot/pcl/kinect_stream" />
+
+  <!-- Run a nodelet manager for processing nodes -->
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+
+  <!-- Decimation -->
+  <arg name="decimation_leafsize_m" default="0.01" />
+  <node pkg="nodelet" type="nodelet" name="pipeline_decimation" args="load pcl/VoxelGrid pcl_manager" output="screen">
+    <remap from="~input" to="$(arg input)" />
+
+    <param name="filter_field_name" type="string" value="z" />
+    <param name="filter_limit_min" type="double" value="0.4" />
+    <param name="filter_limit_max" type="double" value="5" />
+    <param name="filter_limit_negative" type="bool" value="false" />
+    <param name="leaf_size" type="double" value="$(arg decimation_leafsize_m)" />
+
+    <remap from="~output" to="/vrt/fromrobot/pcl/01_decimated" />
+  </node>
+
+  <!-- Outlier Removal -->
+  <arg name="outlier_mean_k" default="10" />
+  <arg name="outlier_stddev" default="1.0" />
+  <node pkg="nodelet" type="nodelet" name="pipeline_outlier_removal" output="screen"
+    args="load pcl/StatisticalOutlierRemoval pcl_manager" >
+    <remap from="~input" to="/vrt/fromrobot/pcl/01_decimated" />
+
+    <param name="mean_k" type="int" value="$(arg outlier_mean_k)" />
+    <param name="stddev" type="double" value="$(arg outlier_stddev)" />
+    <param name="negative" type="bool" value="false" />
+
+    <remap from="~output" to="/vrt/fromrobot/pcl/02_outliers_removed" />
+  </node>
+
+  <!-- Compression -->
+  <arg name="compression_profile" default="LOW_RES_ONLINE_COMPRESSION_WITH_COLOR" />
+  <node pkg="vrteleop" type="pcl_compression" name="pipeline_compression" output="screen" >
+    <remap from="input" to="/vrt/fromrobot/pcl/02_outliers_removed" />
+
+    <param name="profile" type="string" value="$(arg compression_profile)" />
+
+    <remap from="output" to="/vrt/fromrobot/pcl/03_compressed" />
+  </node>
+
+</launch>
+
