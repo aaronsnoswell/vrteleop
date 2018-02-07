@@ -82,9 +82,11 @@ void Compression::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
     }
     else
     {
+        /*
         ROS_INFO(
             "Compression: Received input cloud but there are no subscribers - not publishing"
         );
+        */
     }
 }
 
