@@ -22,6 +22,6 @@
 
   <!-- Launch the vizualisation programs -->
   <include file="$(find vrteleop)/launch/vizualisation.launch" />
-
+  
 </launch>
 
