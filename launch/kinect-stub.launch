@@ -2,6 +2,7 @@
 
   <!-- Launch file that creates a Kinect stub by playing a bagfile -->
 
+  <!-- If we are playing a bagfile, make sure we're using simulator time, not real time -->
   <param name="use_sim_time" value="true" />
 
   <!-- Arg to indicate if we're running on a non-gpu PC -->
@@ -11,7 +12,7 @@
   <arg name="bagfile" default="$(find vrteleop)/bags/test_01.bag" />
 
   <!-- Play a rosbag recording of the relevant topics -->
-  <node pkg="rosbag" type="play" name="player_nogpu" output="screen"
+  <node pkg="rosbag" type="play" name="rosbag_player" output="screen"
     args="--clock --loop --quiet --rate=0.5 $(arg bagfile)" />
 
   <group if="$(arg crop_cloud)">
@@ -26,12 +27,12 @@
       <param name="filter_limit_max" type="double" value="0.2" />
       <param name="filter_limit_negative" type="bool" value="false" />
 
-      <remap from="~output" to="/pcl_stream_debug1" />
+      <remap from="~output" to="/vrt/fromrobot/pcl/_horizontalcropped" />
     </node>
 
     <!-- VoxelGrid filters for viewing on my crappy laptop with no GPU -->
     <node pkg="nodelet" type="nodelet" name="debug_decimation_2" args="standalone pcl/VoxelGrid" output="screen">
-      <remap from="~input" to="/pcl_stream_debug1" />
+      <remap from="~input" to="/vrt/fromrobot/pcl/_horizontalcropped" />
 
       <param name="filter_field_name" type="string" value="y" />
       <param name="filter_limit_min" type="double" value="-0.2" />
