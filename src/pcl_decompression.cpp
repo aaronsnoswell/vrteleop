@@ -100,10 +100,10 @@ int main (int argc, char** argv)
         boost::bind(&Decompression::cloudCallback, &MyObj, _1);
 
     // Create a ROS subscriber for the input
-    MyObj.sub = nh.subscribe<vrteleop::CompressedPointCloud2>("/input", 10, boundCloudCallback);
+    MyObj.sub = nh.subscribe<vrteleop::CompressedPointCloud2>("/input", 1, boundCloudCallback);
 
     // Create a ROS publisher for the output
-    MyObj.pub = nh.advertise<sensor_msgs::PointCloud2>("/output", 10);
+    MyObj.pub = nh.advertise<sensor_msgs::PointCloud2>("/output", 1);
 
     // Spin
     ros::spin();
